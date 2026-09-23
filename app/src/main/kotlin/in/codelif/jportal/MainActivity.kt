@@ -1,5 +1,6 @@
 package `in`.codelif.jportal
 
+import android.os.SystemClock
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
@@ -14,7 +15,12 @@ import `in`.codelif.jportal.ui.theme.JPortalTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
-        installSplashScreen()
+        installSplashScreen().setOnExitAnimationListener { splash ->
+            // the app is ready before the blep is done, let it land, then zoom the frog out over the app
+            val left = (splash.iconAnimationStartMillis + splash.iconAnimationDurationMillis - SystemClock.uptimeMillis()).coerceIn(0, 720)
+            splash.iconView.animate().setStartDelay(left).scaleX(1.15f).scaleY(1.15f).setDuration(250).start()
+            splash.view.animate().setStartDelay(left).alpha(0f).setDuration(250).withEndAction { splash.remove() }.start()
+        }
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.auto(android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT),
             navigationBarStyle = SystemBarStyle.auto(android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT),
