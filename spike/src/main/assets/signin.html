@@ -1,0 +1,36 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<script src="https://accounts.google.com/gsi/client" async></script>
+</head>
+<body style="font-family:sans-serif;padding:16px">
+<h3>approach B</h3>
+<div id="btn"></div>
+<pre id="log" style="white-space:pre-wrap;font-size:11px"></pre>
+<script>
+const q = new URLSearchParams(location.search);
+const silent = q.get('silent') === '1';
+function send(o) { try { jportal.postMessage(JSON.stringify(o)); } catch (e) { document.getElementById('log').textContent += 'no bridge ' + e + '\n'; } }
+function log(m) { document.getElementById('log').textContent += m + '\n'; send({ type: 'log', m: m }); }
+function onCred(r) { log('credential via ' + r.select_by); send({ type: 'credential', credential: r.credential, by: r.select_by }); }
+function boot(tries) {
+  if (!(window.google && google.accounts && google.accounts.id)) {
+    if (tries > 100) return log('gsi never loaded');
+    return setTimeout(() => boot(tries + 1), 100);
+  }
+  log('gsi loaded, silent=' + silent + ' ua=' + navigator.userAgent);
+  google.accounts.id.initialize({
+    client_id: q.get('cid'), callback: onCred, ux_mode: 'popup', auto_select: true,
+    use_fedcm_for_prompt: false, use_fedcm_for_button: false, itp_support: true, cancel_on_tap_outside: false,
+  });
+  if (!silent) google.accounts.id.renderButton(document.getElementById('btn'), { theme: 'filled_blue', size: 'large', shape: 'pill' });
+  google.accounts.id.prompt(n => {
+    const f = k => { try { return n[k] && n[k](); } catch (e) { return 'n/a'; } };
+    log('moment ' + JSON.stringify({ type: f('getMomentType'), displayed: f('isDisplayed'), notDisplayed: f('getNotDisplayedReason'), skipped: f('getSkippedReason'), dismissed: f('getDismissedReason') }));
+  });
+}
+boot(0);
+</script>
+</body>
+</html>

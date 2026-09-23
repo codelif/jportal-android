@@ -1,0 +1,3 @@
+[submodule "ktjiit"]
+	path = ktjiit
+	url = https://github.com/codelif/ktjiit.git

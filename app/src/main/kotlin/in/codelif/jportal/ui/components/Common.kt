@@ -1,0 +1,250 @@
+package `in`.codelif.jportal.ui.components
+
+import androidx.annotation.DrawableRes
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LargeTopAppBar
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+import `in`.codelif.jportal.R
+import `in`.codelif.jportal.data.Resource
+import `in`.codelif.jportal.session.SignInRequired
+import `in`.codelif.ktjiit.http.PortalException
+import kotlin.math.PI
+import kotlin.math.cos
+import kotlin.math.sin
+
+@Composable
+fun Ic(@DrawableRes id: Int, contentDescription: String? = null, modifier: Modifier = Modifier, tint: Color = androidx.compose.material3.LocalContentColor.current) =
+    Icon(painterResource(id), contentDescription, modifier, tint)
+
+/**
+ * stand-in for m3 expressive's loading indicator, which stable material3 doesn't ship:
+ * a scalloped blob that breathes between 5 and 8 lobes while it spins.
+ */
+@Composable
+fun Loading(modifier: Modifier = Modifier, size: Dp = 48.dp, color: Color = MaterialTheme.colorScheme.primary) {
+    val t = rememberInfiniteTransition(label = "loading")
+    val spin by t.animateFloat(0f, 360f, infiniteRepeatable(tween(2600, easing = LinearEasing)), label = "spin")
+    val morph by t.animateFloat(0f, 1f, infiniteRepeatable(tween(1300), RepeatMode.Reverse), label = "morph")
+    Canvas(modifier.size(size).graphicsLayer { rotationZ = spin }) {
+        val r = this.size.minDimension / 2f * 0.82f
+        val lobes = 5f + 3f * morph
+        val depth = 0.10f + 0.06f * (1f - morph)
+        val path = Path()
+        val steps = 120
+        for (i in 0..steps) {
+            val a = (2 * PI * i / steps).toFloat()
+            val rr = r * (1f - depth + depth * cos(lobes * a))
+            val x = center.x + rr * cos(a)
+            val y = center.y + rr * sin(a)
+            if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
+        }
+        path.close()
+        drawPath(path, color)
+    }
+}
+
+@Composable
+fun CenteredLoading() = Box(Modifier.fillMaxSize().padding(top = 96.dp), contentAlignment = Alignment.TopCenter) { Loading() }
+
+fun ago(ms: Long?, now: Long = System.currentTimeMillis()): String {
+    if (ms == null) return "never"
+    val m = (now - ms) / 60_000
+    return when {
+        m < 1 -> "just now"
+        m < 60 -> "${m}m ago"
+        m < 24 * 60 -> "${m / 60}h ago"
+        else -> "${m / (24 * 60)}d ago"
+    }
+}
+
+fun describe(e: Throwable?): String = when (e) {
+    null -> ""
+    is SignInRequired -> "Sign in again to refresh"
+    is PortalException.Network -> "You're offline"
+    is PortalException.ServerUnavailable -> "The portal is down right now"
+    is PortalException.PortalError -> e.errors.firstOrNull()?.lowercase()?.replaceFirstChar { it.uppercase() } ?: "The portal said no"
+    is PortalException.SessionExpired -> "Session expired"
+    is PortalException.EmptyResponse, is PortalException.Malformed -> "The portal sent something odd"
+    else -> "Something went wrong"
+}
+
+/** thin strip above content when what you see is cached and the refresh failed */
+@Composable
+fun StaleNotice(res: Resource<*>, onRetry: () -> Unit, modifier: Modifier = Modifier) {
+    AnimatedVisibility(res.error != null && res.data != null, modifier, enter = expandVertically() + fadeIn(), exit = shrinkVertically() + fadeOut()) {
+        Surface(
+            color = MaterialTheme.colorScheme.secondaryContainer,
+            contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+            shape = MaterialTheme.shapes.medium,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+        ) {
+            Row(Modifier.padding(start = 16.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                Ic(if (res.error is PortalException.Network) R.drawable.ic_wifi_off else R.drawable.ic_history, null, Modifier.size(18.dp))
+                Spacer(Modifier.width(12.dp))
+                Text(
+                    "${describe(res.error)} · updated ${ago(res.fetchedAt)}",
+                    style = MaterialTheme.typography.labelLarge,
+                    modifier = Modifier.weight(1f),
+                )
+                TextButton(onClick = onRetry) { Text("Retry") }
+            }
+        }
+    }
+}
+
+@Composable
+fun MessageState(@DrawableRes icon: Int, title: String, body: String? = null, action: String? = null, onAction: (() -> Unit)? = null) {
+    Column(
+        Modifier.fillMaxWidth().padding(horizontal = 32.dp, vertical = 64.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Box(Modifier.size(88.dp).background(MaterialTheme.colorScheme.surfaceContainerHigh, CircleShape), contentAlignment = Alignment.Center) {
+            Ic(icon, null, Modifier.size(40.dp), MaterialTheme.colorScheme.primary)
+        }
+        Spacer(Modifier.height(20.dp))
+        Text(title, style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Center)
+        if (body != null) {
+            Spacer(Modifier.height(8.dp))
+            Text(body, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
+        }
+        if (action != null && onAction != null) {
+            Spacer(Modifier.height(16.dp))
+            androidx.compose.material3.FilledTonalButton(onClick = onAction) { Text(action) }
+        }
+    }
+}
+
+/** the no-data-yet branches every screen shares; returns true when the caller should draw content */
+fun <T> LazyListScope.resourceStates(res: Resource<T>, onRetry: () -> Unit, empty: (T) -> Boolean = { false }, emptyTitle: String = "Nothing here yet"): Boolean {
+    val data = res.data
+    when {
+        data == null && res.error == null -> item("loading") { CenteredLoading() }
+        data == null -> item("error") {
+            MessageState(
+                if (res.error is PortalException.Network) R.drawable.ic_wifi_off else R.drawable.ic_warning,
+                describe(res.error), "Pull down or tap retry.", "Retry", onRetry,
+            )
+        }
+        empty(data) -> item("empty") { MessageState(R.drawable.ic_celebration, emptyTitle) }
+        else -> return true
+    }
+    return false
+}
+
+@Composable
+fun SectionHeader(text: String, modifier: Modifier = Modifier, trailing: @Composable (() -> Unit)? = null) {
+    Row(modifier.fillMaxWidth().padding(start = 20.dp, end = 12.dp, top = 20.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(text, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary, modifier = Modifier.weight(1f))
+        trailing?.invoke()
+    }
+}
+
+/**
+ * every top level screen: large flexible app bar that collapses on scroll,
+ * pull to refresh, and a lazy column.
+ */
+@Composable
+fun ScreenScaffold(
+    title: String,
+    modifier: Modifier = Modifier,
+    subtitle: String? = null,
+    onBack: (() -> Unit)? = null,
+    refreshing: Boolean = false,
+    onRefresh: (() -> Unit)? = null,
+    listState: LazyListState = rememberLazyListState(),
+    actions: @Composable androidx.compose.foundation.layout.RowScope.() -> Unit = {},
+    bottomPadding: Dp = 0.dp,
+    content: LazyListScope.() -> Unit,
+) {
+    val behavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+    Scaffold(
+        modifier = modifier.nestedScroll(behavior.nestedScrollConnection),
+        containerColor = MaterialTheme.colorScheme.surface,
+        contentWindowInsets = androidx.compose.foundation.layout.WindowInsets(0),
+        topBar = {
+            LargeTopAppBar(
+                title = {
+                    Column {
+                        Text(title, maxLines = 1)
+                        if (subtitle != null) {
+                            Text(subtitle, maxLines = 1, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                },
+                navigationIcon = {
+                    if (onBack != null) IconButton(onClick = onBack) { Ic(R.drawable.ic_arrow_back, "Back") }
+                },
+                actions = actions,
+                scrollBehavior = behavior,
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                ),
+            )
+        },
+    ) { inner ->
+        val list = @Composable {
+            LazyColumn(
+                state = listState,
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(bottom = bottomPadding + 24.dp),
+                verticalArrangement = Arrangement.spacedBy(0.dp),
+                content = content,
+            )
+        }
+        // pad the box, not the list, so the refresh indicator drops out from under the app bar
+        val box = Modifier.fillMaxSize().padding(top = inner.calculateTopPadding())
+        if (onRefresh != null) {
+            PullToRefreshBox(isRefreshing = refreshing, onRefresh = onRefresh, modifier = box) { list() }
+        } else Box(box) { list() }
+    }
+}

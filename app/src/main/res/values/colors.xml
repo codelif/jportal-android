@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- same black as the hand-drawn art so the scaled drawing sits seamlessly -->
+    <color name="launcher_classic_background">#040406</color>
+    <color name="window_background">#F9F9FE</color>
+</resources>

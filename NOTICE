@@ -1,0 +1,29 @@
+JPortal for Android
+Copyright (C) 2026 Harsh Sharma
+Licensed under the GNU General Public License v3.0 only, see LICENSE.
+
+Based on JPortal (https://github.com/codeblech/jportal) by codeblech, whose
+design and hand-drawn icon this app carries forward, with blessings.
+
+Portions of the protocol knowledge (endpoint names, payload shapes, the
+LocalName and AES scheme) are derived from:
+
+  jsjiit, Copyright (c) codeblech, ISC License
+  https://github.com/codeblech/jsjiit
+
+  pyjiit, Copyright (c) 2024 Harsh Sharma, MIT License
+  https://github.com/codelif/pyjiit
+
+ISC License text (jsjiit):
+
+  Permission to use, copy, modify, and/or distribute this software for any
+  purpose with or without fee is hereby granted, provided that the above
+  copyright notice and this permission notice appear in all copies.
+
+  THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+  WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+  MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+  ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+  WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+  ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+  OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.

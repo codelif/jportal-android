@@ -1,0 +1,12 @@
+.gradle/
+build/
+.kotlin/
+.idea/
+*.iml
+local.properties
+captures/
+*.jks
+*.keystore
+*.har
+local-fixtures/
+release-notes.md
