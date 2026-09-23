@@ -25,7 +25,7 @@ object Gpa {
         return recompute(real.map { p -> projections[p.semester]?.let { p.copy(sgpa = it, projected = true) } ?: p } + future, keepReal = true)
     }
 
-    private fun creditsOf(r: SemesterResult) = r.courseCredits.takeIf { it > 0 } ?: r.registeredCredits
+    private fun creditsOf(r: SemesterResult) = r.courseCredits.takeIf { it > 0 } ?: r.earnedCredits
 
     /** recomputes cgpa down the line; real untouched semesters keep the portal's own figure */
     fun recompute(points: List<GpaPoint>, keepReal: Boolean): List<GpaPoint> {
