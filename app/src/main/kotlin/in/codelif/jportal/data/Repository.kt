@@ -21,8 +21,8 @@ class Repository(
 ) {
     private val stores = HashMap<String, Store<*>>()
 
-    // the portal gets cranky with a dozen parallel calls, the subject fan-out would do exactly that
-    private val limiter = Semaphore(4)
+    // the portal gets cranky with a dozen parallel calls, 6 fills a semester's class lists in two rounds
+    private val limiter = Semaphore(6)
 
     @Suppress("UNCHECKED_CAST")
     private fun <T> store(key: String, serializer: KSerializer<T>, maxAgeMin: Long, fetch: suspend (Portal) -> T): Store<T> =
