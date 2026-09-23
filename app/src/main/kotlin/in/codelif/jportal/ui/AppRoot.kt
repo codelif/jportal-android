@@ -33,12 +33,12 @@ import androidx.compose.ui.unit.dp
 import `in`.codelif.jportal.LocalGraph
 import `in`.codelif.jportal.R
 import `in`.codelif.jportal.feature.attendance.AttendanceScreen
+import `in`.codelif.jportal.feature.feedback.FeedbackScreen
 import `in`.codelif.jportal.feature.academics.AcademicsScreen
 import `in`.codelif.jportal.feature.academics.GradeCardScreen
 import `in`.codelif.jportal.feature.academics.MarksScreen
 import `in`.codelif.jportal.feature.me.AboutScreen
 import `in`.codelif.jportal.feature.me.BankScreen
-import `in`.codelif.jportal.feature.me.FeedbackScreen
 import `in`.codelif.jportal.feature.me.FeesScreen
 import `in`.codelif.jportal.feature.me.HostelScreen
 import `in`.codelif.jportal.feature.me.MeScreen

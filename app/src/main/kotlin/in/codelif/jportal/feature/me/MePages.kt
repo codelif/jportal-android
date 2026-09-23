@@ -309,22 +309,3 @@ fun HostelScreen() {
         }
     }
 }
-
-@Composable
-fun FeedbackScreen() {
-    Page("Feedback", LocalGraph.current.repo.feedback) { events ->
-        if (events.isEmpty()) {
-            item("none") {
-                MessageState(
-                    Frog.Sleep, "No feedback window open",
-                )
-            }
-        } else {
-            item("events") {
-                Group(Modifier.padding(top = 8.dp)) {
-                    events.forEach { e -> row { Entry(R.drawable.ic_rate_review, e.description.ifBlank { e.code }, "Open on the portal") {} } }
-                }
-            }
-        }
-    }
-}
