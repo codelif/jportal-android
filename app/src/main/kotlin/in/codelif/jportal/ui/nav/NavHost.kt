@@ -24,14 +24,14 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.flow.collectLatest
 
 val LocalSharedScope = staticCompositionLocalOf<SharedTransitionScope?> { null }
 val LocalNavScope = staticCompositionLocalOf<AnimatedVisibilityScope?> { null }
@@ -46,15 +46,22 @@ fun NavHost(nav: Navigator, modifier: Modifier = Modifier, content: @Composable 
     val seek = remember { SeekableTransitionState<Route>(nav.current) }
     val transition = rememberTransition(seek, label = "nav")
     val holder = rememberSaveableStateHolder()
-    val scope = rememberCoroutineScope()
     var gesture by remember { mutableStateOf(false) }
     // last seen depth per route, popped routes are gone from the stack by the time we animate
     val depth = remember { HashMap<String, Int>() }
 
     LaunchedEffect(nav) {
-        snapshotFlow { nav.stack.toList() }.collect { stack ->
+        snapshotFlow { nav.stack.toList() to gesture }.collectLatest { (stack, swiping) ->
             stack.forEachIndexed { i, r -> depth[r.key] = if (r is Route.Tab) 0 else i }
-            if (!gesture && seek.currentState != stack.last()) seek.animateTo(stack.last())
+            val last = stack.last()
+            if (!swiping && (seek.currentState != last || seek.targetState != last)) {
+                // a back swipe interrupting this animation cancels it, that must not end the loop or taps stop navigating
+                try {
+                    seek.animateTo(last)
+                } catch (e: CancellationException) {
+                    ensureActive()
+                }
+            }
             // forget scroll state of screens that fell off the stack, tabs keep theirs
             (depth.keys - stack.map { it.key }.toSet()).filter { k -> Route.tabs.none { it.key == k } }.forEach {
                 holder.removeState(it)
@@ -70,10 +77,8 @@ fun NavHost(nav: Navigator, modifier: Modifier = Modifier, content: @Composable 
             events.collect { e -> seek.seekTo(e.progress * 0.95f, prev) }
             nav.pop()
             seek.animateTo(prev)
-        } catch (c: CancellationException) {
-            scope.launch { seek.animateTo(nav.current) }
-            throw c
         } finally {
+            // a cancelled swipe is settled back by the loop above once this flips
             gesture = false
         }
     }

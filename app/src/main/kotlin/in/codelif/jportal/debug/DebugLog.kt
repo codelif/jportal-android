@@ -27,11 +27,12 @@ object DebugLog {
     fun record(where: String, e: Throwable) {
         val kind = when (e) {
             is PortalException.PortalError -> "PortalError(${e.code}) ${e.errors.joinToString("; ")}"
-            is PortalException.ServerUnavailable -> "ServerUnavailable(${e.code})"
+            is PortalException.ServerUnavailable -> "ServerUnavailable(${e.code}, ${e.shape})"
             is PortalException -> e.javaClass.simpleName
             else -> "${e.javaClass.simpleName}: ${e.message}"
         }
         lines.addLast("${stamp.format(Date())} $where ${redact(kind)}")
+        if (BuildConfig.DEBUG) android.util.Log.w("JPortal", lines.last())
         while (lines.size > MAX) lines.removeFirst()
     }
 

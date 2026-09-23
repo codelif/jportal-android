@@ -101,6 +101,18 @@ fun Loading(modifier: Modifier = Modifier, size: Dp = 48.dp, color: Color = Mate
     }
 }
 
+/** a soft pulsing block that holds the exact space of text still on its way */
+@Composable
+fun Placeholder(width: Dp, height: Dp, modifier: Modifier = Modifier) {
+    val t = rememberInfiniteTransition(label = "placeholder")
+    val a by t.animateFloat(0.45f, 0.9f, infiniteRepeatable(tween(850), RepeatMode.Reverse), label = "pulse")
+    Box(
+        modifier.size(width, height)
+            .graphicsLayer { alpha = a }
+            .background(MaterialTheme.colorScheme.surfaceContainerHighest, MaterialTheme.shapes.extraSmall),
+    )
+}
+
 @Composable
 fun CenteredLoading() = Box(Modifier.fillMaxSize().padding(top = 96.dp), contentAlignment = Alignment.TopCenter) { Loading() }
 
@@ -176,6 +188,7 @@ fun MessageState(@DrawableRes icon: Int, title: String, body: String? = null, ac
 fun <T> LazyListScope.resourceStates(res: Resource<T>, onRetry: () -> Unit, empty: (T) -> Boolean = { false }, emptyTitle: String = "Nothing here yet"): Boolean {
     val data = res.data
     when {
+        data == null && res.error == null && !res.checked -> {}
         data == null && res.error == null -> item("loading") { CenteredLoading() }
         data == null -> item("error") {
             MessageState(
@@ -216,7 +229,7 @@ fun ScreenScaffold(
 ) {
     val behavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     Scaffold(
-        modifier = modifier.nestedScroll(behavior.nestedScrollConnection),
+        modifier = modifier,
         containerColor = MaterialTheme.colorScheme.surface,
         contentWindowInsets = androidx.compose.foundation.layout.WindowInsets(0),
         topBar = {
@@ -242,9 +255,11 @@ fun ScreenScaffold(
         },
     ) { inner ->
         val list = @Composable {
+            // the app bar sits closest to the list so a downward swipe grows the header first,
+            // pull to refresh only gets what's left once it's fully open
             LazyColumn(
                 state = listState,
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier.fillMaxSize().nestedScroll(behavior.nestedScrollConnection),
                 contentPadding = PaddingValues(bottom = bottomPadding + 24.dp),
                 verticalArrangement = Arrangement.spacedBy(0.dp),
                 content = content,

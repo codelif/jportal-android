@@ -10,7 +10,8 @@
 <div id="btn"></div>
 <script>
 // served by the app at the portal origin so google's client id accepts it.
-// mode=button renders google's own button, mode=silent only tries one tap auto sign-in.
+// mode=button renders google's own button and waits for a tap, so signing out actually sticks.
+// mode=silent only tries one tap auto sign-in, that's the hidden re-auth.
 const q = new URLSearchParams(location.search);
 const silent = q.get('mode') === 'silent';
 const send = o => { try { jportal.postMessage(JSON.stringify(o)); } catch (e) {} };
@@ -22,7 +23,7 @@ function boot(tries) {
   google.accounts.id.initialize({
     client_id: q.get('cid'),
     callback: r => send({ type: 'credential', credential: r.credential, by: r.select_by }),
-    ux_mode: 'popup', auto_select: true, itp_support: true, cancel_on_tap_outside: false,
+    ux_mode: 'popup', auto_select: silent, itp_support: true, cancel_on_tap_outside: false,
     use_fedcm_for_prompt: false, use_fedcm_for_button: false,
   });
   if (!silent) {
@@ -31,7 +32,7 @@ function boot(tries) {
       size: 'large', shape: 'pill', text: 'continue_with', logo_alignment: 'left',
       width: Math.min(400, Number(q.get('w')) || 320),
     });
-    send({ type: 'ready' });
+    return send({ type: 'ready' });
   }
   google.accounts.id.prompt(n => {
     const f = k => { try { return n[k] && n[k](); } catch (e) { return null; } };

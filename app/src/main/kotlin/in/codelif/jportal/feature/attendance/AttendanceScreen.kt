@@ -1,7 +1,15 @@
 package `in`.codelif.jportal.feature.attendance
 
-import androidx.compose.animation.animateContentSize
-import androidx.compose.foundation.clickable
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.layout.Box
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.platform.LocalDensity
+import `in`.codelif.jportal.ui.components.Loading
+import `in`.codelif.jportal.ui.components.Placeholder
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -52,14 +60,24 @@ import `in`.codelif.ktjiit.model.Semester
 import `in`.codelif.ktjiit.model.SubjectAttendance
 import kotlin.math.roundToInt
 
-/** a subject row: the portal's percentage straight away, exact counts once the class list lands */
-data class SubjectLine(val subject: SubjectAttendance, val tally: Tally?) {
-    val percent: Float get() = tally?.takeIf { it.total > 0 }?.percent?.toFloat() ?: (subject.percent ?: 0.0).toFloat()
+/**
+ * a subject row. the class list is what makes the numbers exact, the portal's
+ * own percentage is only a fallback for when that list can't be had.
+ */
+class SubjectLine(val subject: SubjectAttendance, daily: Resource<DailyAttendance>) {
+    val tally: Tally? = daily.data?.let { AttendanceMath.tally(it.classes) }?.takeIf { it.total > 0 }
+
+    /** class list still on its way, nothing final to show yet */
+    val counting: Boolean = daily.data == null && daily.error == null
+
+    val started: Boolean = tally != null || (!counting && (subject.percent ?: 0.0) > 0.0)
+    val percent: Float = tally?.percent?.toFloat() ?: (subject.percent ?: 0.0).toFloat()
 }
 
+/** the attendance answer plus one line per subject. the resource isn't [Resource.checked] until every class list was looked for on disk */
 @Composable
-fun rememberAttendance(repo: Repository, sem: Semester?, semesterNumber: String): Pair<Resource<*>, List<SubjectLine>> {
-    if (sem == null) return Resource<Unit>(refreshing = true) to emptyList()
+fun rememberAttendance(repo: Repository, meta: Resource<*>, sem: Semester?, semesterNumber: String): Pair<Resource<*>, List<SubjectLine>> {
+    if (sem == null) return meta to emptyList()
     val store = remember(sem.id) { repo.attendance(sem, semesterNumber) }
     val detail by store.state.collectAsState()
     LaunchedEffect(store) { store.refresh() }
@@ -72,10 +90,9 @@ fun rememberAttendance(repo: Repository, sem: Semester?, semesterNumber: String)
             d.state.collectAsState()
         }
     }
-    val lines = subjects.mapIndexed { i, s ->
-        SubjectLine(s, dailies[i].value.data?.let { AttendanceMath.tally(it.classes) }?.takeIf { it.total > 0 })
-    }
-    return detail to lines
+    val lines = subjects.mapIndexed { i, s -> SubjectLine(s, dailies[i].value) }
+    // cached class lists arrive a few ms after the detail, drawing in between would flash placeholders
+    return detail.copy(checked = detail.checked && dailies.all { it.value.checked }) to lines
 }
 
 @Composable
@@ -86,7 +103,7 @@ fun AttendanceScreen() {
     val meta by graph.repo.attendanceMeta.state.collectAsState()
     val target by graph.prefs.targetState.collectAsState()
     val semNumber = meta.data?.header?.semesterNumber.orEmpty()
-    val (detail, lines) = rememberAttendance(graph.repo, sel.selected, semNumber)
+    val (detail, lines) = rememberAttendance(graph.repo, meta, sel.selected, semNumber)
     var editTarget by remember { mutableStateOf(false) }
 
     val refresh = {
@@ -108,10 +125,11 @@ fun AttendanceScreen() {
     ) {
         item("stale") { StaleNotice(detail, refresh) }
         @Suppress("UNCHECKED_CAST")
-        if (resourceStates(detail as Resource<Any>, refresh, empty = { lines.isEmpty() }, emptyTitle = "No attendance for this semester yet")) {
+        if (resourceStates(detail as Resource<Any>, refresh, empty = { lines.isEmpty() }, emptyTitle = "No attendance for this semester yet") && detail.checked) {
             item("overview") { Overview(lines, target, onTarget = { editTarget = true }) }
+            // no item animations: the order never changes, and springing cards come apart from the overview
             items(lines, key = { it.subject.subjectId }) { line ->
-                SubjectCard(line, target, Modifier.animateItem()) {
+                SubjectCard(line, target) {
                     sel.selected?.let { nav.push(Route.Subject(it.id, line.subject.subjectId)) }
                 }
             }
@@ -124,8 +142,15 @@ fun AttendanceScreen() {
 private fun Overview(lines: List<SubjectLine>, target: Int, onTarget: () -> Unit) {
     val counted = lines.mapNotNull { it.tally }
     val total = Tally(counted.sumOf { it.attended }, counted.sumOf { it.total })
-    val percent = if (total.total > 0) total.percent.toFloat() else lines.map { it.percent }.average().toFloat().takeIf { !it.isNaN() } ?: 0f
-    val low = lines.count { (it.tally != null || (it.subject.percent ?: 0.0) > 0.0) && it.percent < target }
+    // one number, shown once every subject is in, so it never climbs while lists land
+    val waiting = lines.count { it.counting }
+    val uncounted = lines.count { it.started && it.tally == null }
+    val percent = when {
+        waiting > 0 -> 0f
+        total.total > 0 -> total.percent.toFloat()
+        else -> lines.filter { it.started }.map { it.percent }.average().toFloat().takeIf { !it.isNaN() } ?: 0f
+    }
+    val low = lines.count { it.started && it.percent < target }
     val extra = LocalExtraColors.current
 
     Surface(
@@ -136,25 +161,39 @@ private fun Overview(lines: List<SubjectLine>, target: Int, onTarget: () -> Unit
     ) {
         Row(Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
             AttendanceRing(percent, target, size = 116.dp, stroke = 12.dp) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("${percent.roundToInt()}", style = NumberStyle.copy(fontSize = 36.sp, lineHeight = 38.sp))
-                    Text("percent", style = MaterialTheme.typography.labelSmall)
+                if (waiting > 0) {
+                    Loading(size = 40.dp)
+                } else {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("${percent.roundToInt()}", style = NumberStyle.copy(fontSize = 36.sp, lineHeight = 38.sp))
+                        Text("percent", style = MaterialTheme.typography.labelSmall)
+                    }
                 }
             }
             Spacer(Modifier.width(20.dp))
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(
                     when {
-                        lines.isEmpty() -> "No classes yet"
+                        waiting > 0 -> "Counting classes"
+                        lines.none { it.started } -> "No classes yet"
                         low == 0 -> "All clear"
                         low == 1 -> "1 subject below target"
                         else -> "$low subjects below target"
                     },
                     style = MaterialTheme.typography.titleLarge,
                 )
-                if (total.total > 0) {
-                    Text("${total.attended} of ${total.total} classes attended", style = MaterialTheme.typography.bodyMedium)
-                }
+                // always one line here, so the card keeps its height through every state
+                Text(
+                    when {
+                        waiting > 0 -> "${lines.size - waiting} of ${lines.size} subjects in"
+                        total.total == 0 -> "Nothing marked this semester"
+                        uncounted > 0 -> "${total.attended} of ${total.total} classes, $uncounted not counted"
+                        else -> "${total.attended} of ${total.total} classes attended"
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
                 Surface(
                     onClick = onTarget,
                     shape = MaterialTheme.shapes.small,
@@ -182,14 +221,17 @@ private fun SubjectCard(line: SubjectLine, target: Int, modifier: Modifier = Mod
         color = MaterialTheme.colorScheme.surfaceContainerLow,
         modifier = modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 5.dp),
     ) {
-        Row(Modifier.padding(16.dp).animateContentSize(), verticalAlignment = Alignment.CenterVertically) {
-            val started = line.tally != null || (s.percent ?: 0.0) > 0.0
-            AttendanceRing(if (started) line.percent else 0f, target, Modifier.shared("ring-${s.subjectId}"), size = 60.dp, stroke = 6.dp) {
-                Text(
-                    if (started) "${line.percent.roundToInt()}" else "–",
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                    color = if (started) androidx.compose.ui.graphics.Color.Unspecified else MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            val started = line.started
+            val ring = if (line.counting) Modifier.alpha(pulse()) else Modifier
+            AttendanceRing(if (started) line.percent else 0f, target, ring.shared("ring-${s.subjectId}"), size = 60.dp, stroke = 6.dp) {
+                if (!line.counting) {
+                    Text(
+                        if (started) "${line.percent.roundToInt()}" else "–",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        color = if (started) androidx.compose.ui.graphics.Color.Unspecified else MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
             Spacer(Modifier.width(16.dp))
             Column(Modifier.weight(1f)) {
@@ -200,35 +242,54 @@ private fun SubjectCard(line: SubjectLine, target: Int, modifier: Modifier = Mod
                 Spacer(Modifier.height(4.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                     ComponentTags(s)
-                    line.tally?.let {
-                        Text("${it.attended}/${it.total}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    when {
+                        line.counting -> Placeholder(34.dp, 12.dp)
+                        line.tally != null -> Text(
+                            "${line.tally.attended}/${line.tally.total}",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                     }
                 }
-                if (!started) {
-                    Spacer(Modifier.height(4.dp))
-                    Text("No classes marked yet", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                line.tally?.let { t ->
-                    Spacer(Modifier.height(4.dp))
-                    val miss = t.canMiss(target)
-                    val need = t.mustAttend(target)
-                    Text(
-                        when {
-                            need > 0 -> "Attend the next $need"
-                            miss > 0 -> "Can miss $miss"
-                            else -> "Right on the edge, don't miss"
-                        },
-                        style = MaterialTheme.typography.labelLarge,
-                        color = when {
-                            need > 0 -> MaterialTheme.colorScheme.error
-                            miss > 0 -> extra.good
-                            else -> extra.warn
-                        },
-                    )
+                Spacer(Modifier.height(4.dp))
+                // exactly one line in every state, a card never changes height when its list lands
+                val label = MaterialTheme.typography.labelLarge
+                val t = line.tally
+                when {
+                    line.counting -> Box(Modifier.height(with(LocalDensity.current) { label.lineHeight.toDp() }), contentAlignment = Alignment.CenterStart) {
+                        Placeholder(84.dp, 12.dp)
+                    }
+                    t != null -> {
+                        val miss = t.canMiss(target)
+                        val need = t.mustAttend(target)
+                        Text(
+                            when {
+                                need > 0 -> "Attend the next $need"
+                                miss > 0 -> "Can miss $miss"
+                                else -> "Right on the edge, don't miss"
+                            },
+                            style = label,
+                            color = when {
+                                need > 0 -> MaterialTheme.colorScheme.error
+                                miss > 0 -> extra.good
+                                else -> extra.warn
+                            },
+                        )
+                    }
+                    started -> Text("Portal's %, class list didn't load", style = label, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+                    else -> Text("No classes marked yet", style = label, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }
     }
+}
+
+/** same breathing as [Placeholder], for things that aren't boxes */
+@Composable
+private fun pulse(): Float {
+    val t = rememberInfiniteTransition(label = "pulse")
+    val a by t.animateFloat(0.45f, 0.9f, infiniteRepeatable(tween(850), RepeatMode.Reverse), label = "a")
+    return a
 }
 
 @Composable

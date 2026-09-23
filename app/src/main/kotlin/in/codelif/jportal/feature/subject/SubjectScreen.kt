@@ -109,7 +109,7 @@ fun SubjectScreen(route: Route.Subject) {
         item("stale") { StaleNotice(daily, { dailyStore.refresh(force = true) }) }
         item("hero") {
             Column(Modifier.fillMaxWidth().padding(vertical = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                AttendanceRing(percent, target, Modifier.shared("ring-${subject.subjectId}"), size = 184.dp, stroke = 16.dp) {
+                AttendanceRing(percent, target, Modifier.shared("ring-${subject.subjectId}"), size = 184.dp, stroke = 16.dp, fill = false) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text("${percent.roundToInt()}%", style = NumberStyle)
                         if (tally.total > 0) Text("${tally.attended} of ${tally.total}", style = MaterialTheme.typography.labelLarge)

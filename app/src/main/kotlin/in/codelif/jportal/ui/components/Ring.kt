@@ -16,7 +16,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -47,6 +50,7 @@ fun AttendanceRing(
     size: Dp = 56.dp,
     stroke: Dp = 6.dp,
     animate: Boolean = true,
+    fill: Boolean = true,
     content: @Composable () -> Unit = {},
 ) {
     val extra = LocalExtraColors.current
@@ -58,11 +62,14 @@ fun AttendanceRing(
         else -> scheme.error
     }
 
-    val sweep = remember { Animatable(0f) }
+    // lazy lists recompose a ring every time it scrolls back in, only the very first fill should play
+    var filled by rememberSaveable { mutableStateOf(!fill) }
+    val sweep = remember { Animatable(if (filled) percent.coerceIn(0f, 100f) / 100f else 0f) }
     LaunchedEffect(percent) {
         sweep.animateTo(percent.coerceIn(0f, 100f) / 100f, spring(dampingRatio = 0.8f, stiffness = Spring.StiffnessVeryLow))
+        if (percent > 0f) filled = true
     }
-    val amp = remember { Animatable(0f) }
+    val amp = remember { Animatable(if (filled && safe) 1f else 0f) }
     LaunchedEffect(safe) { amp.animateTo(if (safe) 1f else 0f, tween(600)) }
 
     val phase = if (animate && safe) {

@@ -3,7 +3,10 @@ package `in`.codelif.jportal.ui.components
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.awaitVerticalTouchSlopOrCancellation
+import androidx.compose.foundation.gestures.verticalDrag
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -104,6 +107,9 @@ fun GpaChart(
     val label = MaterialTheme.typography.labelSmall.copy(color = scheme.onSurfaceVariant)
     val haptics = LocalHapticFeedback.current
     val project by rememberUpdatedState(onProject)
+    // every drag step changes points, the gesture handlers must outlive that or the list steals the drag
+    val pts by rememberUpdatedState(points)
+    val slots by rememberUpdatedState(futureSlots)
     var dragging by remember { mutableStateOf<Int?>(null) }
     val allSems = (points.map { it.semester } + futureSlots).distinct().sorted()
     if (allSems.isEmpty()) return
@@ -113,38 +119,46 @@ fun GpaChart(
     Canvas(
         modifier.fillMaxWidth().height(220.dp)
             .semantics { contentDescription = "SGPA and CGPA by semester. Latest CGPA ${points.lastOrNull { !it.projected }?.cgpa ?: 0.0}" }
-            .pointerInput(allSems, points) {
+            .pointerInput(Unit) {
                 val pad = 28.dp.toPx()
-                fun xOf(i: Int) = pad + i * (size.width - 2 * pad) / (allSems.size - 1).coerceAtLeast(1)
-                fun semAt(x: Float) = allSems.indices.minByOrNull { abs(xOf(it) - x) }?.let { allSems[it] }
+                fun sems() = (pts.map { it.semester } + slots).distinct().sorted()
+                fun semAt(x: Float): Int? {
+                    val all = sems()
+                    val step = (size.width - 2 * pad) / (all.size - 1).coerceAtLeast(1)
+                    return all.indices.minByOrNull { abs(pad + it * step - x) }?.let { all[it] }
+                }
                 fun valueAt(yPx: Float): Double {
                     val top = 16.dp.toPx()
                     val bottom = size.height - 24.dp.toPx()
                     val v = hi - (yPx - top) / (bottom - top) * (hi - lo)
                     return (v.coerceIn(lo, hi) * 10).roundToInt() / 10.0
                 }
-                detectDragGestures(
-                    onDragStart = { o ->
-                        dragging = semAt(o.x)?.takeIf { s -> s in futureSlots || points.any { it.semester == s && it.projected } }
-                    },
-                    onDragEnd = { dragging = null },
-                    onDragCancel = { dragging = null },
-                ) { change, _ ->
-                    val s = dragging ?: return@detectDragGestures
-                    val v = valueAt(change.position.y)
-                    val old = points.firstOrNull { it.semester == s }?.sgpa
-                    if (old == null || (old * 2).roundToInt() != (v * 2).roundToInt()) haptics.performHapticFeedback(HapticFeedbackType.SegmentFrequentTick)
-                    project(s, v)
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false)
+                    // only future semesters are draggable, anywhere else the page scrolls as usual
+                    val s = semAt(down.position.x)?.takeIf { s -> s in slots || pts.any { it.semester == s && it.projected } } ?: return@awaitEachGesture
+                    val slop = awaitVerticalTouchSlopOrCancellation(down.id) { c, _ -> c.consume() } ?: return@awaitEachGesture
+                    dragging = s
+                    fun move(y: Float) {
+                        val v = valueAt(y)
+                        val old = pts.firstOrNull { it.semester == s }?.sgpa
+                        if (old == null || (old * 2).roundToInt() != (v * 2).roundToInt()) haptics.performHapticFeedback(HapticFeedbackType.SegmentFrequentTick)
+                        project(s, v)
+                    }
+                    move(slop.position.y)
+                    verticalDrag(slop.id) { c -> c.consume(); move(c.position.y) }
+                    dragging = null
                 }
             }
-            .pointerInput(futureSlots) {
+            .pointerInput(Unit) {
                 detectTapGestures { o ->
                     val pad = 28.dp.toPx()
-                    val i = allSems.indices.minByOrNull { abs(pad + it * (size.width - 2 * pad) / (allSems.size - 1).coerceAtLeast(1) - o.x) } ?: return@detectTapGestures
-                    val s = allSems[i]
-                    if (s in futureSlots && points.none { it.semester == s }) {
+                    val all = (pts.map { it.semester } + slots).distinct().sorted()
+                    val step = (size.width - 2 * pad) / (all.size - 1).coerceAtLeast(1)
+                    val s = all.indices.minByOrNull { abs(pad + it * step - o.x) }?.let { all[it] } ?: return@detectTapGestures
+                    if (s in slots && pts.none { it.semester == s }) {
                         haptics.performHapticFeedback(HapticFeedbackType.Confirm)
-                        project(s, points.lastOrNull()?.sgpa ?: 8.0)
+                        project(s, pts.lastOrNull()?.sgpa ?: 8.0)
                     }
                 }
             },

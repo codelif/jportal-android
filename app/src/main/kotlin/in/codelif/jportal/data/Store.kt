@@ -41,9 +41,11 @@ class Store<T>(
     private suspend fun loadDisk() {
         if (loaded) return
         loaded = true
-        val entry = withContext(Dispatchers.IO) { cache.get(key) } ?: return
-        val value = runCatching { Transport.json.decodeFromString(serializer, entry.json) }.getOrNull() ?: return
-        _state.update { if (it.data == null) it.copy(data = value, fetchedAt = entry.fetchedAt) else it }
+        val entry = withContext(Dispatchers.IO) { cache.get(key) }
+        val value = entry?.let { runCatching { Transport.json.decodeFromString(serializer, it.json) }.getOrNull() }
+        _state.update {
+            if (it.data == null && value != null) it.copy(data = value, fetchedAt = entry.fetchedAt, checked = true) else it.copy(checked = true)
+        }
     }
 
     /** paint from disk, then hit the network if stale or [force] */
@@ -58,7 +60,7 @@ class Store<T>(
                 val value = limiter.withPermit { sessions.call(fetch) }
                 val now = System.currentTimeMillis()
                 withContext(Dispatchers.IO) { cache.put(key, Transport.json.encodeToString(serializer, value), now) }
-                _state.value = Resource(value, now, refreshing = false, error = null)
+                _state.value = Resource(value, now, refreshing = false, error = null, checked = true)
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e
                 DebugLog.record(key.substringBefore(':'), e)
