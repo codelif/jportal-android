@@ -40,7 +40,7 @@ fun AboutScreen() {
     ScreenScaffold("About", onBack = { nav.pop() }) {
         item("head") {
             Column(Modifier.fillMaxWidth().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                androidx.compose.foundation.Image(painterResource(R.drawable.ic_launcher_classic_foreground), null, Modifier.size(120.dp))
+                `in`.codelif.jportal.ui.components.ClassicMark(96.dp)
                 Text("JPortal", style = MaterialTheme.typography.headlineMedium)
                 Text("${BuildConfig.VERSION_NAME} · ${BuildConfig.FLAVOR}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text(

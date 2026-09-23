@@ -26,4 +26,3 @@ rootProject.name = "jportal-android"
 includeBuild("ktjiit")
 
 include(":app")
-include(":spike")
