@@ -31,9 +31,9 @@ import `in`.codelif.jportal.data.AppIcon
 
 /** whichever launcher icon is picked in settings, drawn the way a launcher shows it: the 72dp safe circle of the 108dp art */
 @Composable
-fun AppMark(size: Dp, modifier: Modifier = Modifier) {
-    val icon by LocalGraph.current.prefs.iconState.collectAsState()
-    val (bg, fg) = when (icon) {
+fun AppMark(size: Dp, modifier: Modifier = Modifier, only: AppIcon? = null) {
+    val picked by LocalGraph.current.prefs.iconState.collectAsState()
+    val (bg, fg) = when (only ?: picked) {
         AppIcon.Classic -> R.color.launcher_classic_background to R.drawable.ic_launcher_classic_foreground
         AppIcon.Frog -> R.color.launcher_background to R.drawable.ic_launcher_foreground
     }

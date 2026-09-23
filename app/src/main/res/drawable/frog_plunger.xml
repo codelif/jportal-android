@@ -1,0 +1,37 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="92dp"
+    android:viewportWidth="108"
+    android:viewportHeight="92">
+    <!-- the frog with a plunger on its head, for when the portal falls over -->
+    <path android:pathData="M54,6 V30"
+        android:strokeColor="#C8894B"
+        android:strokeWidth="4.2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path android:pathData="M25,58 a29,17.5 0 1,0 58,0 a29,17.5 0 1,0 -58,0 Z M27.5,38 a12.5,12.5 0 1,0 25,0 a12.5,12.5 0 1,0 -25,0 Z M55.5,38 a12.5,12.5 0 1,0 25,0 a12.5,12.5 0 1,0 -25,0 Z"
+        android:fillColor="#72CC6A" />
+    <path android:pathData="M42,34 Q42,19 54,19 Q66,19 66,34 Z"
+        android:fillColor="#E5484D" />
+    <path android:pathData="M40,34 H68 Q68,37 65,37 H43 Q40,37 40,34 Z"
+        android:fillColor="#B8323A" />
+    <path android:pathData="M31.4,38 a8.6,8.6 0 1,0 17.2,0 a8.6,8.6 0 1,0 -17.2,0 Z"
+        android:fillColor="#FFFFFF" />
+    <path android:pathData="M59.4,38 a8.6,8.6 0 1,0 17.2,0 a8.6,8.6 0 1,0 -17.2,0 Z"
+        android:fillColor="#FFFFFF" />
+    <path android:pathData="M36.4,38.4 a3.6,3.6 0 1,0 7.2,0 a3.6,3.6 0 1,0 -7.2,0 Z"
+        android:fillColor="#0E2214" />
+    <path android:pathData="M64.4,38.4 a3.6,3.6 0 1,0 7.2,0 a3.6,3.6 0 1,0 -7.2,0 Z"
+        android:fillColor="#0E2214" />
+    <path android:pathData="M40.2,36.4 a1.6,1.6 0 1,0 3.2,0 a1.6,1.6 0 1,0 -3.2,0 Z"
+        android:fillColor="#FFFFFF" />
+    <path android:pathData="M68.2,36.4 a1.6,1.6 0 1,0 3.2,0 a1.6,1.6 0 1,0 -3.2,0 Z"
+        android:fillColor="#FFFFFF" />
+    <path android:pathData="M45,62 Q49.5,59 54,62 Q58.5,65 63,62"
+        android:strokeColor="#0E2214"
+        android:strokeWidth="2.6"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path android:pathData="M24,40 Q20,47 24,49 Q28,47 24,40 Z"
+        android:fillColor="#7CC4FF" />
+</vector>

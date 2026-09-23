@@ -162,16 +162,22 @@ fun StaleNotice(res: Resource<*>, onRetry: () -> Unit, modifier: Modifier = Modi
     }
 }
 
+/** the frog's moods, one per kind of empty */
+enum class Frog(@DrawableRes val art: Int) {
+    Sleep(R.drawable.frog_sleep),
+    Plunger(R.drawable.frog_plunger),
+    Party(R.drawable.frog_party),
+    Look(R.drawable.frog_look),
+}
+
 @Composable
-fun MessageState(@DrawableRes icon: Int, title: String, body: String? = null, action: String? = null, onAction: (() -> Unit)? = null) {
+fun MessageState(frog: Frog, title: String, body: String? = null, action: String? = null, onAction: (() -> Unit)? = null) {
     Column(
-        Modifier.fillMaxWidth().padding(horizontal = 32.dp, vertical = 64.dp),
+        Modifier.fillMaxWidth().padding(horizontal = 32.dp, vertical = 48.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Box(Modifier.size(88.dp).background(MaterialTheme.colorScheme.surfaceContainerHigh, CircleShape), contentAlignment = Alignment.Center) {
-            Ic(icon, null, Modifier.size(40.dp), MaterialTheme.colorScheme.primary)
-        }
-        Spacer(Modifier.height(20.dp))
+        androidx.compose.foundation.Image(painterResource(frog.art), null, Modifier.size(width = 150.dp, height = 128.dp))
+        Spacer(Modifier.height(16.dp))
         Text(title, style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Center)
         if (body != null) {
             Spacer(Modifier.height(8.dp))
@@ -192,11 +198,11 @@ fun <T> LazyListScope.resourceStates(res: Resource<T>, onRetry: () -> Unit, empt
         data == null && res.error == null -> item("loading") { CenteredLoading() }
         data == null -> item("error") {
             MessageState(
-                if (res.error is PortalException.Network) R.drawable.ic_wifi_off else R.drawable.ic_warning,
+                if (res.error is PortalException.Network) Frog.Sleep else Frog.Plunger,
                 describe(res.error), "Pull down or tap retry.", "Retry", onRetry,
             )
         }
-        empty(data) -> item("empty") { MessageState(R.drawable.ic_celebration, emptyTitle) }
+        empty(data) -> item("empty") { MessageState(Frog.Sleep, emptyTitle) }
         else -> return true
     }
     return false
@@ -225,6 +231,7 @@ fun ScreenScaffold(
     listState: LazyListState = rememberLazyListState(),
     actions: @Composable androidx.compose.foundation.layout.RowScope.() -> Unit = {},
     bottomPadding: Dp = 0.dp,
+    pinned: (@Composable () -> Unit)? = null,
     content: LazyListScope.() -> Unit,
 ) {
     val behavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
@@ -233,25 +240,29 @@ fun ScreenScaffold(
         containerColor = MaterialTheme.colorScheme.surface,
         contentWindowInsets = androidx.compose.foundation.layout.WindowInsets(0),
         topBar = {
-            LargeTopAppBar(
-                title = {
-                    Column {
-                        Text(title, maxLines = 1)
-                        if (subtitle != null) {
-                            Text(subtitle, maxLines = 1, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Column {
+                LargeTopAppBar(
+                    title = {
+                        Column {
+                            Text(title, maxLines = 1)
+                            if (subtitle != null) {
+                                Text(subtitle, maxLines = 1, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
                         }
-                    }
-                },
-                navigationIcon = {
-                    if (onBack != null) IconButton(onClick = onBack) { Ic(R.drawable.ic_arrow_back, "Back") }
-                },
-                actions = actions,
-                scrollBehavior = behavior,
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-                ),
-            )
+                    },
+                    navigationIcon = {
+                        if (onBack != null) IconButton(onClick = onBack) { Ic(R.drawable.ic_arrow_back, "Back") }
+                    },
+                    actions = actions,
+                    scrollBehavior = behavior,
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        // a pinned row below can't follow the bar's scroll tint, so the bar stays flat with it
+                        scrolledContainerColor = if (pinned != null) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.surfaceContainer,
+                    ),
+                )
+                pinned?.invoke()
+            }
         },
     ) { inner ->
         val list = @Composable {
