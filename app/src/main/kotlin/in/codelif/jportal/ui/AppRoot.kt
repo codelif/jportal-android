@@ -10,6 +10,8 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.pager.PagerState
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ShortNavigationBar
 import androidx.compose.material3.ShortNavigationBarItem
@@ -32,9 +34,9 @@ import `in`.codelif.jportal.LocalGraph
 import `in`.codelif.jportal.R
 import `in`.codelif.jportal.feature.attendance.AttendanceScreen
 import `in`.codelif.jportal.feature.exams.ExamsScreen
-import `in`.codelif.jportal.feature.grades.GradeCardScreen
-import `in`.codelif.jportal.feature.grades.GradesScreen
-import `in`.codelif.jportal.feature.grades.MarksScreen
+import `in`.codelif.jportal.feature.academics.AcademicsScreen
+import `in`.codelif.jportal.feature.academics.GradeCardScreen
+import `in`.codelif.jportal.feature.academics.MarksScreen
 import `in`.codelif.jportal.feature.me.AboutScreen
 import `in`.codelif.jportal.feature.me.BankScreen
 import `in`.codelif.jportal.feature.me.FeedbackScreen
@@ -75,17 +77,18 @@ private fun SignedIn() {
     val needsSheet by graph.sessions.needsSheet.collectAsState()
     val onTab = nav.stack.size == 1
     val barHeight: Dp = 80.dp
+    val pager = rememberPagerState(initialPage = Route.tabs.indexOf(nav.tab)) { Route.tabs.size }
 
     CompositionLocalProvider(LocalNavigator provides nav, LocalBottomInset provides if (onTab) barHeight else 0.dp) {
         Box(Modifier.fillMaxSize()) {
-            NavHost(nav, Modifier.fillMaxSize()) { route -> Screen(route) }
+            NavHost(nav, pager, Modifier.fillMaxSize()) { route -> Screen(route) }
 
             AnimatedVisibility(
                 onTab,
                 modifier = Modifier.align(Alignment.BottomCenter),
                 enter = slideInVertically { it } + fadeIn(),
                 exit = slideOutVertically { it } + fadeOut(),
-            ) { BottomBar(nav) }
+            ) { BottomBar(nav, pager) }
 
             if (reauth != null) ReauthHost()
         }
@@ -98,11 +101,11 @@ private fun SignedIn() {
 private fun Screen(route: Route) = when (route) {
     Route.Attendance -> AttendanceScreen()
     Route.Exams -> ExamsScreen()
-    Route.Grades -> GradesScreen()
+    Route.Academics -> AcademicsScreen()
     Route.Me -> MeScreen()
     is Route.Subject -> SubjectScreen(route)
-    is Route.Marks -> MarksScreen(route)
     is Route.GradeCard -> GradeCardScreen(route)
+    is Route.Marks -> MarksScreen(route)
     Route.Profile -> ProfileScreen()
     Route.Fees -> FeesScreen()
     Route.Bank -> BankScreen()
@@ -117,17 +120,18 @@ private data class TabSpec(val tab: Route.Tab, val label: String, val icon: Int,
 private val tabs = listOf(
     TabSpec(Route.Attendance, "Attendance", R.drawable.ic_fact_check, R.drawable.ic_fact_check_filled),
     TabSpec(Route.Exams, "Exams", R.drawable.ic_event_note, R.drawable.ic_event_note_filled),
-    TabSpec(Route.Grades, "Grades", R.drawable.ic_school, R.drawable.ic_school_filled),
+    TabSpec(Route.Academics, "Academics", R.drawable.ic_school, R.drawable.ic_school_filled),
     TabSpec(Route.Me, "Me", R.drawable.ic_person, R.drawable.ic_person_filled),
 )
 
 @Composable
-private fun BottomBar(nav: Navigator) {
+private fun BottomBar(nav: Navigator, pager: PagerState) {
     val haptics = LocalHapticFeedback.current
     Surface(color = MaterialTheme.colorScheme.surfaceContainer, tonalElevation = 0.dp) {
         ShortNavigationBar(Modifier.navigationBarsPadding(), containerColor = MaterialTheme.colorScheme.surfaceContainer) {
             tabs.forEach { spec ->
-                val selected = nav.tab == spec.tab
+                // follows the swipe, not just where it settled
+                val selected = pager.targetPage == Route.tabs.indexOf(spec.tab)
                 ShortNavigationBarItem(
                     selected = selected,
                     onClick = {
