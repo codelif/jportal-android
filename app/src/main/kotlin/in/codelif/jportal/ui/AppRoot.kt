@@ -33,7 +33,6 @@ import androidx.compose.ui.unit.dp
 import `in`.codelif.jportal.LocalGraph
 import `in`.codelif.jportal.R
 import `in`.codelif.jportal.feature.attendance.AttendanceScreen
-import `in`.codelif.jportal.feature.exams.ExamsScreen
 import `in`.codelif.jportal.feature.academics.AcademicsScreen
 import `in`.codelif.jportal.feature.academics.GradeCardScreen
 import `in`.codelif.jportal.feature.academics.MarksScreen
@@ -49,6 +48,7 @@ import `in`.codelif.jportal.feature.signin.ReauthHost
 import `in`.codelif.jportal.feature.signin.SignInScreen
 import `in`.codelif.jportal.feature.signin.SignInSheet
 import `in`.codelif.jportal.feature.subject.SubjectScreen
+import `in`.codelif.jportal.feature.subjects.SubjectsScreen
 import `in`.codelif.jportal.session.AuthState
 import `in`.codelif.jportal.ui.components.Ic
 import `in`.codelif.jportal.ui.nav.NavHost
@@ -100,8 +100,8 @@ private fun SignedIn() {
 @Composable
 private fun Screen(route: Route) = when (route) {
     Route.Attendance -> AttendanceScreen()
-    Route.Exams -> ExamsScreen()
     Route.Academics -> AcademicsScreen()
+    Route.Subjects -> SubjectsScreen()
     Route.Me -> MeScreen()
     is Route.Subject -> SubjectScreen(route)
     is Route.GradeCard -> GradeCardScreen(route)
@@ -119,8 +119,8 @@ private data class TabSpec(val tab: Route.Tab, val label: String, val icon: Int,
 
 private val tabs = listOf(
     TabSpec(Route.Attendance, "Attendance", R.drawable.ic_fact_check, R.drawable.ic_fact_check_filled),
-    TabSpec(Route.Exams, "Exams", R.drawable.ic_event_note, R.drawable.ic_event_note_filled),
     TabSpec(Route.Academics, "Academics", R.drawable.ic_school, R.drawable.ic_school_filled),
+    TabSpec(Route.Subjects, "Subjects", R.drawable.ic_menu_book, R.drawable.ic_menu_book_filled),
     TabSpec(Route.Me, "Me", R.drawable.ic_person, R.drawable.ic_person_filled),
 )
 

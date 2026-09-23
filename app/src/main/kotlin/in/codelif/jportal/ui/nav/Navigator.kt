@@ -10,8 +10,8 @@ sealed interface Route {
 
     sealed interface Tab : Route
     data object Attendance : Tab { override val key = "attendance" }
-    data object Exams : Tab { override val key = "exams" }
     data object Academics : Tab { override val key = "academics" }
+    data object Subjects : Tab { override val key = "subjects" }
     data object Me : Tab { override val key = "me" }
 
     /** codes, not portal ids, so any semester's subject opens the same way */
@@ -29,7 +29,7 @@ sealed interface Route {
     data object About : Route { override val key = "about" }
 
     companion object {
-        val tabs: List<Tab> = listOf(Attendance, Exams, Academics, Me)
+        val tabs: List<Tab> = listOf(Attendance, Academics, Subjects, Me)
     }
 }
 

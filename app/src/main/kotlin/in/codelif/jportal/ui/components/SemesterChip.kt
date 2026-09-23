@@ -1,10 +1,15 @@
 package `in`.codelif.jportal.ui.components
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -13,6 +18,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import `in`.codelif.jportal.LocalGraph
@@ -71,6 +77,36 @@ fun SemesterChip(sel: SemesterSelection, modifier: Modifier = Modifier) {
                     trailingIcon = if (s.code == current.code) ({ Ic(R.drawable.ic_done, null) }) else null,
                 )
             }
+        }
+    }
+}
+
+/** a view's own semester, for lists the portal keeps apart from attendance's (marks, exams) */
+@Composable
+fun SemesterPicker(semesters: List<Semester>, selected: Semester?, onPick: (String) -> Unit, fetchedAt: Long?) {
+    val sem = selected ?: return
+    var open by remember { mutableStateOf(false) }
+    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        Box {
+            FilterChip(
+                selected = true,
+                onClick = { open = true },
+                label = { Text(prettySemester(sem.code)) },
+                trailingIcon = { Ic(R.drawable.ic_expand_more, null, Modifier.size(18.dp)) },
+            )
+            DropdownMenu(open, onDismissRequest = { open = false }) {
+                semesters.forEach { s ->
+                    DropdownMenuItem(
+                        text = { Text(prettySemester(s.code)) },
+                        onClick = { open = false; onPick(s.code) },
+                        trailingIcon = if (s.code == sem.code) ({ Ic(R.drawable.ic_done, null) }) else null,
+                    )
+                }
+            }
+        }
+        Spacer(Modifier.weight(1f))
+        fetchedAt?.let {
+            Text("Updated ${ago(it)}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }

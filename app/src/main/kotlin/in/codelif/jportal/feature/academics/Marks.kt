@@ -1,7 +1,6 @@
 package `in`.codelif.jportal.feature.academics
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
@@ -9,14 +8,10 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -36,18 +31,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import `in`.codelif.jportal.LocalGraph
-import `in`.codelif.jportal.R
 import `in`.codelif.jportal.data.Resource
 import `in`.codelif.jportal.feature.attendance.titleCase
 import `in`.codelif.jportal.feature.subject.ScoreChip
 import `in`.codelif.jportal.feature.subject.byCode
 import `in`.codelif.jportal.feature.subject.fmt
 import `in`.codelif.jportal.ui.LocalNavigator
-import `in`.codelif.jportal.ui.components.Ic
 import `in`.codelif.jportal.ui.components.ScreenScaffold
+import `in`.codelif.jportal.ui.components.SemesterPicker
 import `in`.codelif.jportal.ui.components.StaleNotice
-import `in`.codelif.jportal.ui.components.ago
-import `in`.codelif.jportal.ui.components.prettySemester
 import `in`.codelif.jportal.ui.components.resourceStates
 import `in`.codelif.jportal.ui.nav.Route
 import `in`.codelif.jportal.ui.theme.NumberStyle
@@ -88,41 +80,12 @@ fun rememberMarks(startAt: String?): MarksView {
  * college's business.
  */
 fun LazyListScope.marksContent(view: MarksView) {
-    item("pick") { Picker(view) }
+    item("pick") { SemesterPicker(view.semesters, view.semester, view.pick, view.report.fetchedAt) }
     item("stale") { StaleNotice(view.report, view.refresh) }
     if (!resourceStates(view.report, view.refresh, empty = { it.subjects.isEmpty() }, emptyTitle = "No marks uploaded yet")) return
     val report = view.report.data!!
     item("summary") { Summary(report) }
     items(report.subjects, key = { it.code }) { s -> SubjectMarksCard(s, view.semester?.code) }
-}
-
-@Composable
-private fun Picker(view: MarksView) {
-    val sem = view.semester ?: return
-    var open by remember { mutableStateOf(false) }
-    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-        Box {
-            FilterChip(
-                selected = true,
-                onClick = { open = true },
-                label = { Text(prettySemester(sem.code)) },
-                trailingIcon = { Ic(R.drawable.ic_expand_more, null, Modifier.size(18.dp)) },
-            )
-            DropdownMenu(open, onDismissRequest = { open = false }) {
-                view.semesters.forEach { s ->
-                    DropdownMenuItem(
-                        text = { Text(prettySemester(s.code)) },
-                        onClick = { open = false; view.pick(s.code) },
-                        trailingIcon = if (s.code == sem.code) ({ Ic(R.drawable.ic_done, null) }) else null,
-                    )
-                }
-            }
-        }
-        Spacer(Modifier.weight(1f))
-        view.report.fetchedAt?.let {
-            Text("Updated ${ago(it)}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-    }
 }
 
 private fun weighted(s: SubjectMarks) = s.scores.mapNotNull { it.weighted as? Score.Value }
