@@ -33,6 +33,10 @@ import `in`.codelif.jportal.feature.attendance.titleCase
 import `in`.codelif.jportal.feature.subject.byCode
 import `in`.codelif.jportal.ui.LocalBottomInset
 import `in`.codelif.jportal.ui.components.Ic
+import `in`.codelif.jportal.ui.components.Frog
+import `in`.codelif.jportal.ui.components.Group
+import `in`.codelif.jportal.ui.LocalNavigator
+import `in`.codelif.jportal.ui.nav.Route
 import `in`.codelif.jportal.ui.components.MessageState
 import `in`.codelif.jportal.ui.components.ScreenScaffold
 import `in`.codelif.jportal.ui.components.SectionHeader
@@ -95,14 +99,9 @@ fun ExamsScreen() {
     ) {
         item("stale") { StaleNotice(events, refresh) }
         if (resourceStates(events, refresh)) {
-            if (papers.isEmpty()) {
-                item("none") {
-                    MessageState(
-                        R.drawable.ic_celebration, "No exams on the calendar",
-                        events.data.orEmpty().takeIf { it.isNotEmpty() }?.joinToString("\n") { it.description.ifBlank { it.code } }
-                            ?.let { "Events this semester:\n$it" } ?: "Enjoy it while it lasts.",
-                    )
-                }
+            val evs = events.data.orEmpty()
+            if (papers.isEmpty() && evs.isEmpty()) {
+                item("none") { MessageState(Frog.Sleep, "No exams on the calendar", "Enjoy it while it lasts.") }
             }
             upcoming.firstOrNull()?.let { next -> item("next") { NextExam(next) } }
             if (upcoming.size > 1) {
@@ -116,11 +115,56 @@ fun ExamsScreen() {
                 item("past-h") { SectionHeader("Done") }
                 items(past, key = { "p-${it.event.id}-${it.slot.code}-${it.slot.date}" }) { PaperRow(it, faded = true) }
             }
+            if (evs.isNotEmpty()) {
+                item("ev-h") { SectionHeader("This semester's exams") }
+                item("ev") {
+                    val nav = LocalNavigator.current
+                    Group {
+                        evs.sortedBy { it.from ?: Long.MAX_VALUE }.forEach { e ->
+                            row { EventRow(e) { sem?.let { nav.push(Route.Marks(it.code)) } } }
+                        }
+                    }
+                }
+            }
         }
     }
 }
 
 private val DAY = DateTimeFormatter.ofPattern("EEEE, d MMMM")
+private val SHORT = DateTimeFormatter.ofPattern("EEE d MMM")
+
+/** an exam event even before its date sheet: when it starts, and once it's done, a way to its marks */
+@Composable
+private fun EventRow(e: ExamEvent, onMarks: () -> Unit) {
+    val start = e.from?.let { java.time.Instant.ofEpochMilli(it).atZone(java.time.ZoneId.of("Asia/Kolkata")).toLocalDate() }
+    val today = LocalDate.now()
+    val days = start?.let { ChronoUnit.DAYS.between(today, it) }
+    val done = days != null && days < 0
+    Surface(onClick = onMarks, enabled = done, color = androidx.compose.ui.graphics.Color.Transparent) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(e.code.ifBlank { e.description }, style = MaterialTheme.typography.titleMedium)
+                Text(
+                    listOfNotNull(e.description.takeIf { it.isNotBlank() && it != e.code }, start?.format(SHORT)).joinToString(" · "),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Text(
+                when {
+                    days == null -> "date not out"
+                    days > 1 -> "in $days days"
+                    days == 1L -> "tomorrow"
+                    days == 0L -> "today"
+                    else -> "marks"
+                },
+                style = MaterialTheme.typography.labelLarge,
+                color = if (done) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            if (done) Ic(R.drawable.ic_chevron_right, null, Modifier.size(20.dp), MaterialTheme.colorScheme.primary)
+        }
+    }
+}
 private val TIME = DateTimeFormatter.ofPattern("h:mm a")
 
 @Composable
