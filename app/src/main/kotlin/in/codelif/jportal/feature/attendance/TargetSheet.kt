@@ -39,7 +39,7 @@ fun TargetSheet(current: Int, onDone: (Int) -> Unit) {
         ) {
             Text("Attendance goal", style = MaterialTheme.typography.headlineSmall)
             Text(
-                "Rings go flat and warm up when a subject falls under this. JIIT's rule is 75%, some profs want more.",
+                "Subjects under this get flagged.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

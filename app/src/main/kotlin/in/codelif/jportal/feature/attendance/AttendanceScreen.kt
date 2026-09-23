@@ -5,7 +5,13 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalDensity
 import `in`.codelif.jportal.ui.components.Loading
@@ -72,6 +78,10 @@ class SubjectLine(val subject: SubjectAttendance, daily: Resource<DailyAttendanc
 
     val started: Boolean = tally != null || (!counting && (subject.percent ?: 0.0) > 0.0)
     val percent: Float = tally?.percent?.toFloat() ?: (subject.percent ?: 0.0).toFloat()
+
+    /** the last few classes, oldest first, true for present */
+    val recent: List<Boolean> = daily.data?.classes.orEmpty().filter { it.date != null }
+        .sortedWith(compareBy({ it.date }, { it.start })).takeLast(7).map { it.isPresent }
 }
 
 /** the attendance answer plus one line per subject. the resource isn't [Resource.checked] until every class list was looked for on disk */
@@ -130,7 +140,7 @@ fun AttendanceScreen() {
             // no item animations: the order never changes, and springing cards come apart from the overview
             items(lines, key = { it.subject.subjectId }) { line ->
                 SubjectCard(line, target) {
-                    sel.selected?.let { nav.push(Route.Subject(it.id, line.subject.subjectId)) }
+                    sel.selected?.let { nav.push(Route.Subject(it.code, line.subject.code)) }
                 }
             }
         }
@@ -244,11 +254,14 @@ private fun SubjectCard(line: SubjectLine, target: Int, modifier: Modifier = Mod
                     ComponentTags(s)
                     when {
                         line.counting -> Placeholder(34.dp, 12.dp)
-                        line.tally != null -> Text(
-                            "${line.tally.attended}/${line.tally.total}",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
+                        line.tally != null -> {
+                            Text(
+                                "${line.tally.attended}/${line.tally.total}",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            RecentDots(line.recent, Modifier.padding(start = 4.dp))
+                        }
                     }
                 }
                 Spacer(Modifier.height(4.dp))
@@ -279,6 +292,36 @@ private fun SubjectCard(line: SubjectLine, target: Int, modifier: Modifier = Mod
                     started -> Text("Portal's %, class list didn't load", style = label, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
                     else -> Text("No classes marked yet", style = label, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
+            }
+        }
+    }
+}
+
+/**
+ * one mark per recent class, newest on the right: a filled dot for present,
+ * a cross for absent. the shape carries it, the colour only backs it up.
+ */
+@Composable
+private fun RecentDots(recent: List<Boolean>, modifier: Modifier = Modifier) {
+    if (recent.isEmpty()) return
+    val good = LocalExtraColors.current.good
+    val bad = MaterialTheme.colorScheme.error
+    val present = recent.count { it }
+    Canvas(
+        modifier.size(width = (recent.size * 11 - 3).dp, height = 8.dp)
+            .semantics { contentDescription = "last ${recent.size} classes: $present present, ${recent.size - present} absent" },
+    ) {
+        val h = size.height
+        val step = 11.dp.toPx()
+        recent.forEachIndexed { i, p ->
+            val x = i * step
+            if (p) {
+                drawCircle(good, h / 2 * 0.85f, Offset(x + h / 2, h / 2))
+            } else {
+                val w = 1.8.dp.toPx()
+                val m = w / 2
+                drawLine(bad, Offset(x + m, m), Offset(x + h - m, h - m), w, StrokeCap.Round)
+                drawLine(bad, Offset(x + h - m, m), Offset(x + m, h - m), w, StrokeCap.Round)
             }
         }
     }
