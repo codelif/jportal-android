@@ -8,7 +8,7 @@ import kotlinx.coroutines.flow.asStateFlow
 
 enum class ThemeMode { System, Light, Dark }
 enum class Palette { Wallpaper, JPortal }
-enum class AppIcon { Modern, Classic }
+enum class AppIcon { Frog, Classic }
 
 /** user settings, each one a state flow so compose redraws when it changes */
 class Prefs(context: Context) {
@@ -31,7 +31,7 @@ class Prefs(context: Context) {
 
     private val themeMode = enumPref("theme", ThemeMode.System, ThemeMode.entries.toTypedArray())
     private val palette = enumPref("palette", Palette.Wallpaper, Palette.entries.toTypedArray())
-    private val icon = enumPref("icon", AppIcon.Modern, AppIcon.entries.toTypedArray())
+    private val icon = enumPref("icon", AppIcon.Frog, AppIcon.entries.toTypedArray())
     private val amoled = Pref("amoled", false, { k, d -> sp.getBoolean(k, d) }, { k, v -> putBoolean(k, v) })
     private val target = Pref("target", 75, { k, d -> sp.getInt(k, d) }, { k, v -> putInt(k, v) })
     private val semester = Pref<String?>("semester", null, { k, d -> sp.getString(k, d) }, { k, v -> putString(k, v) })

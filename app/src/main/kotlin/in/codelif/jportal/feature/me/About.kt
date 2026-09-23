@@ -40,7 +40,7 @@ fun AboutScreen() {
     ScreenScaffold("About", onBack = { nav.pop() }) {
         item("head") {
             Column(Modifier.fillMaxWidth().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                `in`.codelif.jportal.ui.components.ClassicMark(96.dp)
+                `in`.codelif.jportal.ui.components.AppMark(96.dp)
                 Text("JPortal", style = MaterialTheme.typography.headlineMedium)
                 Text("${BuildConfig.VERSION_NAME} · ${BuildConfig.FLAVOR}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text(
@@ -52,7 +52,7 @@ fun AboutScreen() {
             }
         }
         item("people-h") { SectionHeader("Made possible by") }
-        item("jportal") { Entry(R.drawable.ic_favorite, "JPortal by codeblech", "The original web app, its design and the hand-drawn icon") { open(context, "https://github.com/codeblech/jportal") } }
+        item("jportal") { Entry(R.drawable.ic_favorite, "JPortal", "Big 🍆 Energy lives on in Yash Malik") { open(context, "https://github.com/codeblech/jportal") } }
         item("jsjiit") { Entry(R.drawable.ic_code, "jsjiit", "ISC, portal protocol groundwork") { open(context, "https://github.com/codeblech/jsjiit") } }
         item("pyjiit") { Entry(R.drawable.ic_code, "pyjiit", "MIT, where it all started") { open(context, "https://github.com/codelif/pyjiit") } }
         item("src") { Entry(R.drawable.ic_open_in_new, "Source code", "GPL-3.0, github.com/codelif/jportal-android") { open(context, "https://github.com/codelif/jportal-android") } }

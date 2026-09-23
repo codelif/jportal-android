@@ -41,7 +41,7 @@ Your portal session is sealed with an Android Keystore key and never leaves the 
 
 ## Credits
 
-codeblech's JPortal: its design, its spirit, and the hand-drawn icon you can switch back to in settings. Protocol groundwork from [jsjiit](https://github.com/codeblech/jsjiit) and [pyjiit](https://github.com/codelif/pyjiit). See NOTICE.
+Big 🍆 Energy lives on in [Yash Malik](https://github.com/codeblech): [JPortal](https://github.com/codeblech/jportal) gave this app its design and its spirit, and its hand-drawn icon lives on as the YR Special in settings. Protocol groundwork from [jsjiit](https://github.com/codeblech/jsjiit) and [pyjiit](https://github.com/codelif/pyjiit). See NOTICE.
 
 ## License
 

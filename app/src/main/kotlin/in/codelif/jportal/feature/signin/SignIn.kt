@@ -224,7 +224,7 @@ fun SignInScreen() {
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Spacer(Modifier.height(56.dp))
-            `in`.codelif.jportal.ui.components.ClassicMark(144.dp)
+            `in`.codelif.jportal.ui.components.AppMark(144.dp)
             Spacer(Modifier.height(20.dp))
             Text("JPortal", style = MaterialTheme.typography.displaySmall)
             Spacer(Modifier.height(8.dp))

@@ -81,7 +81,7 @@ fun SettingsScreen() {
             Toggle("Pure black", "Turns dark surfaces fully black, easy on OLED batteries", amoled) { prefs.setAmoled(it) }
         }
         item("icon") {
-            Choice("App icon", AppIcon.entries, icon, { if (it == AppIcon.Classic) "Hand-drawn" else "New" }) {
+            Choice("App icon", AppIcon.entries, icon, { if (it == AppIcon.Classic) "YR Special" else "Frog" }) {
                 prefs.setIcon(it)
                 applyIcon(context, it)
             }

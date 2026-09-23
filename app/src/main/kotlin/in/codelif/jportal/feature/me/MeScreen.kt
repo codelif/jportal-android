@@ -32,6 +32,7 @@ import `in`.codelif.jportal.R
 import `in`.codelif.jportal.feature.attendance.titleCase
 import `in`.codelif.jportal.ui.LocalBottomInset
 import `in`.codelif.jportal.ui.LocalNavigator
+import `in`.codelif.jportal.ui.components.BigEnergy
 import `in`.codelif.jportal.ui.components.Ic
 import `in`.codelif.jportal.ui.components.ScreenScaffold
 import `in`.codelif.jportal.ui.components.SectionHeader
@@ -99,6 +100,7 @@ fun MeScreen() {
         item("app-h") { SectionHeader("App") }
         item("settings") { Entry(R.drawable.ic_settings, "Settings", "Theme, goal, icon") { nav.push(Route.Settings) } }
         item("about") { Entry(R.drawable.ic_info, "About JPortal", "Credits, licenses, debug report") { nav.push(Route.About) } }
+        item("energy") { BigEnergy(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 20.dp)) }
     }
 }
 
