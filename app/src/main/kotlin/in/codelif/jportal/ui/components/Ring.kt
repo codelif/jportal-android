@@ -89,7 +89,7 @@ private fun DrawScope.drawRing(
     notch: Color,
     strokePx: Float,
 ) {
-    val waveAmp = strokePx * 0.42f * amplitude
+    val waveAmp = strokePx * 0.24f * amplitude
     val r = min(size.width, size.height) / 2f - strokePx / 2f - waveAmp
     val cx = size.width / 2f
     val cy = size.height / 2f
@@ -114,7 +114,7 @@ private fun DrawScope.drawRing(
 
     // target notch, only when the arc isn't sitting on it
     val tAngle = start + target * 2f * PI.toFloat()
-    if (target in 0.01f..0.99f && (tAngle > start + sweep + gap)) {
+    if (strokePx >= 10f * density && target in 0.01f..0.99f && (tAngle > start + sweep + gap)) {
         val inner = r - strokePx * 0.15f
         val outer = r + strokePx * 0.15f
         drawLine(
@@ -127,7 +127,7 @@ private fun DrawScope.drawRing(
 
     if (fraction <= 0.001f) return
     // wavy progress arc, sampled; wave count grows with the ring so bumps keep a constant size
-    val waves = max(6f, (2f * PI.toFloat() * r) / (strokePx * 3.2f))
+    val waves = max(8f, (2f * PI.toFloat() * r) / (strokePx * 4.6f))
     val path = Path()
     val steps = max(24, (sweep * r / 2f).toInt())
     for (i in 0..steps) {

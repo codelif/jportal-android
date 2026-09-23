@@ -41,6 +41,15 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withTimeoutOrNull
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -244,7 +253,19 @@ fun ScreenScaffold(
         // pad the box, not the list, so the refresh indicator drops out from under the app bar
         val box = Modifier.fillMaxSize().padding(top = inner.calculateTopPadding())
         if (onRefresh != null) {
-            PullToRefreshBox(isRefreshing = refreshing, onRefresh = onRefresh, modifier = box) { list() }
+            // the big spinner only answers a pull, background refreshes get a quiet bar
+            var pulled by remember { mutableStateOf(false) }
+            val busy by rememberUpdatedState(refreshing)
+            LaunchedEffect(pulled) {
+                if (!pulled) return@LaunchedEffect
+                withTimeoutOrNull(1500) { snapshotFlow { busy }.first { it } }
+                snapshotFlow { busy }.first { !it }
+                pulled = false
+            }
+            PullToRefreshBox(isRefreshing = pulled && refreshing, onRefresh = { pulled = true; onRefresh() }, modifier = box) {
+                list()
+                if (refreshing && !pulled) LinearProgressIndicator(Modifier.fillMaxWidth().height(3.dp))
+            }
         } else Box(box) { list() }
     }
 }

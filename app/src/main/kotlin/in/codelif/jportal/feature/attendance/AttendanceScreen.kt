@@ -125,7 +125,7 @@ private fun Overview(lines: List<SubjectLine>, target: Int, onTarget: () -> Unit
     val counted = lines.mapNotNull { it.tally }
     val total = Tally(counted.sumOf { it.attended }, counted.sumOf { it.total })
     val percent = if (total.total > 0) total.percent.toFloat() else lines.map { it.percent }.average().toFloat().takeIf { !it.isNaN() } ?: 0f
-    val low = lines.count { it.percent < target }
+    val low = lines.count { (it.tally != null || (it.subject.percent ?: 0.0) > 0.0) && it.percent < target }
     val extra = LocalExtraColors.current
 
     Surface(
@@ -183,8 +183,13 @@ private fun SubjectCard(line: SubjectLine, target: Int, modifier: Modifier = Mod
         modifier = modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 5.dp),
     ) {
         Row(Modifier.padding(16.dp).animateContentSize(), verticalAlignment = Alignment.CenterVertically) {
-            AttendanceRing(line.percent, target, Modifier.shared("ring-${s.subjectId}"), size = 60.dp, stroke = 6.dp) {
-                Text("${line.percent.roundToInt()}", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
+            val started = line.tally != null || (s.percent ?: 0.0) > 0.0
+            AttendanceRing(if (started) line.percent else 0f, target, Modifier.shared("ring-${s.subjectId}"), size = 60.dp, stroke = 6.dp) {
+                Text(
+                    if (started) "${line.percent.roundToInt()}" else "–",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    color = if (started) androidx.compose.ui.graphics.Color.Unspecified else MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
             Spacer(Modifier.width(16.dp))
             Column(Modifier.weight(1f)) {
@@ -198,6 +203,10 @@ private fun SubjectCard(line: SubjectLine, target: Int, modifier: Modifier = Mod
                     line.tally?.let {
                         Text("${it.attended}/${it.total}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
+                }
+                if (!started) {
+                    Spacer(Modifier.height(4.dp))
+                    Text("No classes marked yet", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 line.tally?.let { t ->
                     Spacer(Modifier.height(4.dp))

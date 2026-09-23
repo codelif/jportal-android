@@ -63,7 +63,9 @@ fun ExamsScreen() {
     val sem = sems.data?.let { it.byCode(sel.selected?.code) ?: it.firstOrNull() }
 
     val eventsStore = sem?.let { s -> remember(s.id) { repo.examEvents(s) } }
-    val events = eventsStore?.state?.collectAsState()?.value ?: Resource(refreshing = sems.data == null)
+    // no exam semester at all is an answer too, not a reason to spin forever
+    val events = eventsStore?.state?.collectAsState()?.value
+        ?: if (sems.data != null) Resource(data = emptyList(), fetchedAt = sems.fetchedAt) else sems.map { emptyList<ExamEvent>() }
     LaunchedEffect(eventsStore) { eventsStore?.refresh() }
 
     val papers = events.data.orEmpty().flatMap { ev ->
