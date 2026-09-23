@@ -4,7 +4,28 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.dynamicDarkColorScheme
+import androidx.compose.material3.dynamicLightColorScheme
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import `in`.codelif.jportal.ui.components.AppMark
+import `in`.codelif.jportal.ui.components.Group
+import `in`.codelif.jportal.ui.theme.isDark
+import `in`.codelif.jportal.ui.theme.jportalDark
+import `in`.codelif.jportal.ui.theme.jportalLight
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -65,38 +86,48 @@ fun SettingsScreen() {
     var editTarget by remember { mutableStateOf(false) }
     var confirmOut by remember { mutableStateOf(false) }
 
+    val dark = isDark(mode)
+
     ScreenScaffold("Settings", onBack = { nav.pop() }) {
         item("look-h") { SectionHeader("Look") }
-        item("mode") {
-            Choice("Theme", ThemeMode.entries, mode, { it.name }) { prefs.setThemeMode(it) }
-        }
-        item("palette") {
-            val dynamicOk = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
-            Choice(
-                "Colors", Palette.entries, if (dynamicOk) palette else Palette.JPortal,
-                { if (it == Palette.Wallpaper) "Wallpaper" else "JPortal blue" }, enabled = dynamicOk,
-            ) { prefs.setPalette(it) }
-        }
-        item("amoled") {
-            Toggle("Pure black", "Turns dark surfaces fully black, easy on OLED batteries", amoled) { prefs.setAmoled(it) }
-        }
-        item("icon") {
-            Choice("App icon", AppIcon.entries, icon, { if (it == AppIcon.Classic) "YR Special" else "Frog" }) {
-                prefs.setIcon(it)
-                applyIcon(context, it)
+        item("look") {
+            Group {
+                row { Choice("Theme", ThemeMode.entries, mode, { it.name }) { prefs.setThemeMode(it) } }
+                row {
+                    val dynamicOk = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+                    Tiles("Colours") {
+                        PaletteTile(Palette.Wallpaper, (if (dynamicOk) palette else Palette.JPortal) == Palette.Wallpaper, dark, enabled = dynamicOk) { prefs.setPalette(it) }
+                        PaletteTile(Palette.JPortal, !dynamicOk || palette == Palette.JPortal, dark, enabled = true) { prefs.setPalette(it) }
+                    }
+                }
+                // pure black only means something once it's dark
+                if (dark) row { Toggle("Pure black", "Fully black backgrounds", amoled) { prefs.setAmoled(it) } }
+                row {
+                    Tiles("App icon") {
+                        AppIcon.entries.forEach { i ->
+                            Tile(if (i == AppIcon.Classic) "YR Special" else "JeJe", icon == i, onClick = { prefs.setIcon(i); applyIcon(context, i) }) {
+                                AppMark(56.dp, only = i)
+                            }
+                        }
+                    }
+                }
             }
         }
         item("att-h") { SectionHeader("Attendance") }
-        item("target") { Entry(R.drawable.ic_flag, "Attendance goal", "$target%") { editTarget = true } }
+        item("att") { Group { row { Entry(R.drawable.ic_flag, "Attendance goal", "$target%") { editTarget = true } } } }
         item("acc-h") { SectionHeader("Account") }
-        item("out") { Entry(R.drawable.ic_logout, "Sign out", "Clears the session and everything cached on this phone") { confirmOut = true } }
+        item("acc") {
+            Group(Modifier.padding(bottom = 16.dp)) {
+                row { Entry(R.drawable.ic_logout, "Sign out", "Clears the session and everything cached on this phone") { confirmOut = true } }
+            }
+        }
     }
     if (editTarget) TargetSheet(target) { prefs.setTarget(it); editTarget = false }
     if (confirmOut) {
         AlertDialog(
             onDismissRequest = { confirmOut = false },
             title = { Text("Sign out?") },
-            text = { Text("Your cached attendance and marks go too. Signing back in takes a tap.") },
+            text = { Text("Your cached attendance and marks go too.") },
             confirmButton = { TextButton(onClick = { confirmOut = false; graph.signOut() }) { Text("Sign out") } },
             dismissButton = { TextButton(onClick = { confirmOut = false }) { Text("Cancel") } },
         )
@@ -105,8 +136,8 @@ fun SettingsScreen() {
 
 @Composable
 private fun <T> Choice(label: String, options: List<T>, selected: T, name: (T) -> String, enabled: Boolean = true, onPick: (T) -> Unit) {
-    Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 10.dp)) {
-        Text(label, style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(bottom = 8.dp))
+    Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 14.dp)) {
+        Text(label, style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(bottom = 10.dp))
         SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
             options.forEachIndexed { i, o ->
                 SegmentedButton(
@@ -122,13 +153,62 @@ private fun <T> Choice(label: String, options: List<T>, selected: T, name: (T) -
 
 @Composable
 private fun Toggle(title: String, subtitle: String, checked: Boolean, onChange: (Boolean) -> Unit) {
-    Surface(onClick = { onChange(!checked) }, color = MaterialTheme.colorScheme.surface) {
+    Surface(onClick = { onChange(!checked) }, color = Color.Transparent) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text(title, style = MaterialTheme.typography.titleMedium)
                 Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             Switch(checked, onChange)
+        }
+    }
+}
+
+@Composable
+private fun Tiles(label: String, content: @Composable RowScope.() -> Unit) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 14.dp)) {
+        Text(label, style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(bottom = 10.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), content = content)
+    }
+}
+
+/** a pickable square: a preview on top, a name under it, a ring when it's the one */
+@Composable
+private fun RowScope.Tile(label: String, selected: Boolean, enabled: Boolean = true, onClick: () -> Unit, preview: @Composable () -> Unit) {
+    val scheme = MaterialTheme.colorScheme
+    Surface(
+        onClick = onClick,
+        enabled = enabled,
+        shape = MaterialTheme.shapes.large,
+        color = if (selected) scheme.secondaryContainer else scheme.surfaceContainerHigh,
+        border = if (selected) BorderStroke(2.dp, scheme.primary) else null,
+        modifier = Modifier.weight(1f).alpha(if (enabled) 1f else 0.4f),
+    ) {
+        Column(Modifier.padding(vertical = 14.dp).fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+            preview()
+            Spacer(Modifier.height(8.dp))
+            Text(label, style = MaterialTheme.typography.labelLarge)
+        }
+    }
+}
+
+/** the palette's own colours as three overlapping dots, in the mode you're in */
+@Composable
+private fun RowScope.PaletteTile(p: Palette, selected: Boolean, dark: Boolean, enabled: Boolean, onPick: (Palette) -> Unit) {
+    val context = LocalContext.current
+    val scheme = when {
+        p == Palette.JPortal -> if (dark) jportalDark else jportalLight
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> if (dark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+        else -> MaterialTheme.colorScheme
+    }
+    Tile(if (p == Palette.Wallpaper) "Wallpaper" else "JPortal", selected, enabled, onClick = { onPick(p) }) {
+        Row(Modifier.height(56.dp), verticalAlignment = Alignment.CenterVertically) {
+            listOf(scheme.surfaceContainerHighest, scheme.primary, scheme.tertiary).forEachIndexed { i, c ->
+                Box(
+                    Modifier.offset(x = (-10 * i).dp).size(34.dp).clip(CircleShape).background(c)
+                        .border(2.dp, if (selected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh, CircleShape),
+                )
+            }
         }
     }
 }
