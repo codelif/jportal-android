@@ -30,6 +30,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import `in`.codelif.jportal.LocalGraph
+import `in`.codelif.jportal.data.Resource
+import `in`.codelif.jportal.feature.me.InfoRow
+import `in`.codelif.jportal.ui.components.GradeLetter
+import `in`.codelif.jportal.ui.components.Group
+import androidx.compose.material3.TextButton
 import `in`.codelif.jportal.R
 import `in`.codelif.jportal.domain.AttendanceMath
 import `in`.codelif.jportal.feature.attendance.titleCase
@@ -61,65 +66,110 @@ fun SubjectScreen(route: Route.Subject) {
     val repo = graph.repo
     val nav = LocalNavigator.current
     val target by graph.prefs.targetState.collectAsState()
+
+    // attendance, when the portal still keeps it for this semester
     val meta by repo.attendanceMeta.state.collectAsState()
-    val sem = meta.data?.semesters?.firstOrNull { it.id == route.semesterId } ?: return Placeholder { nav.pop() }
+    val attSem = meta.data?.semesters?.byCode(route.semesterCode)
     val semNumber = meta.data?.header?.semesterNumber.orEmpty()
-    val detailStore = remember(sem.id) { repo.attendance(sem, semNumber) }
-    val detail by detailStore.state.collectAsState()
-    val subject = detail.data?.subjects?.firstOrNull { it.subjectId == route.subjectId } ?: return Placeholder { nav.pop() }
-    val dailyStore = remember(sem.id, subject.subjectId) { repo.daily(sem, subject) }
-    val daily by dailyStore.state.collectAsState()
-    LaunchedEffect(dailyStore) { dailyStore.refresh() }
+    val detailStore = attSem?.let { s -> remember(s.id) { repo.attendance(s, semNumber) } }
+    val detail = detailStore?.state?.collectAsState()?.value
+    LaunchedEffect(detailStore) { detailStore?.refresh() }
+    val subject = detail?.data?.subjects?.firstOrNull { it.code == route.subjectCode }
+    val dailyStore = if (attSem != null && subject != null) remember(attSem.id, subject.subjectId) { repo.daily(attSem, subject) } else null
+    val daily = dailyStore?.state?.collectAsState()?.value ?: Resource()
+    LaunchedEffect(dailyStore) { dailyStore?.refresh() }
 
     val classes = daily.data?.classes.orEmpty()
     val tally = AttendanceMath.tally(classes)
-    val percent = if (tally.total > 0) tally.percent.toFloat() else (subject.percent ?: 0.0).toFloat()
+    val percent = if (tally.total > 0) tally.percent.toFloat() else (subject?.percent ?: 0.0).toFloat()
     val calendar = remember(classes) { AttendanceMath.calendar(classes) }
     val trend = remember(classes) { AttendanceMath.trend(classes).map { it.second.toFloat() } }
     var day by rememberSaveable { mutableStateOf<String?>(null) }
     val selectedDay = day?.let(LocalDate::parse)
 
-    // faculty and credits live under the subject registrations
+    // teachers and credits live under the subject registrations
     val subjSems by repo.subjectSemesters.state.collectAsState()
     LaunchedEffect(Unit) { repo.subjectSemesters.refresh() }
-    val subjSem = subjSems.data?.byCode(sem.code)
-    val faculty = subjSem?.let { s ->
+    val faculty = subjSems.data?.byCode(route.semesterCode)?.let { s ->
         val st = remember(s.id) { repo.subjects(s) }
         LaunchedEffect(st) { st.refresh() }
-        st.state.collectAsState().value.data?.rows?.filter { it.code == subject.code }
+        st.state.collectAsState().value.data?.rows?.filter { it.code == route.subjectCode }
     }.orEmpty()
 
     // marks for this subject from the semester's marks pdf
     val marksSems by repo.marksSemesters.state.collectAsState()
     LaunchedEffect(Unit) { repo.marksSemesters.refresh() }
-    val marksSem = marksSems.data?.byCode(sem.code)
-    val marks = marksSem?.let { s ->
+    val marks = marksSems.data?.byCode(route.semesterCode)?.let { s ->
         val st = remember(s.id) { repo.marks(s) }
         LaunchedEffect(st) { st.refresh() }
-        st.state.collectAsState().value.data?.subjects?.firstOrNull { it.code == subject.code }
+        st.state.collectAsState().value.data?.subjects?.firstOrNull { it.code == route.subjectCode }
     }
 
+    // and the grade, once the semester is done
+    val gradeSems by repo.gradeSemesters.state.collectAsState()
+    LaunchedEffect(Unit) { repo.gradeSemesters.refresh() }
+    val grade = gradeSems.data?.byCode(route.semesterCode)?.let { s ->
+        val st = remember(s.id) { repo.gradeCard(s) }
+        LaunchedEffect(st) { st.refresh() }
+        st.state.collectAsState().value.data?.entries?.firstOrNull { it.code == route.subjectCode }
+    }
+
+    val name = subject?.name ?: faculty.firstOrNull()?.name ?: grade?.name ?: marks?.name ?: return Placeholder { nav.pop() }
+    val credits = faculty.firstOrNull()?.credits ?: grade?.credits
+
     ScreenScaffold(
-        title = subject.name.titleCase(),
-        subtitle = "${subject.code} · ${prettySemester(sem.code)}",
+        title = name.titleCase(),
+        subtitle = "${route.subjectCode} · ${prettySemester(route.semesterCode)}",
         onBack = { nav.pop() },
         refreshing = daily.refreshing,
-        onRefresh = { dailyStore.refresh(force = true); detailStore.refresh(force = true) },
+        onRefresh = { dailyStore?.refresh(force = true); detailStore?.refresh(force = true) },
     ) {
-        item("stale") { StaleNotice(daily, { dailyStore.refresh(force = true) }) }
+        item("stale") { StaleNotice(daily, { dailyStore?.refresh(force = true) }) }
         item("hero") {
             Column(Modifier.fillMaxWidth().padding(vertical = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                AttendanceRing(percent, target, Modifier.shared("ring-${subject.subjectId}"), size = 184.dp, stroke = 16.dp, fill = false) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("${percent.roundToInt()}%", style = NumberStyle)
-                        if (tally.total > 0) Text("${tally.attended} of ${tally.total}", style = MaterialTheme.typography.labelLarge)
+                if (subject != null) {
+                    // same rule as the list card: nothing counted and nothing from the portal means it hasn't started
+                    val started = tally.total > 0 || (subject.percent ?: 0.0) > 0.0
+                    AttendanceRing(if (started) percent else 0f, target, Modifier.shared("ring-${subject.subjectId}"), size = 184.dp, stroke = 16.dp, fill = false) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(if (started) "${percent.roundToInt()}%" else "–", style = NumberStyle, color = if (started) Color.Unspecified else MaterialTheme.colorScheme.onSurfaceVariant)
+                            if (tally.total > 0) Text("${tally.attended} of ${tally.total}", style = MaterialTheme.typography.labelLarge)
+                        }
                     }
+                    Spacer(Modifier.height(16.dp))
+                    if (tally.total > 0) Verdict(tally.canMiss(target), tally.mustAttend(target), target)
+                    else if (!started) Text("No classes marked yet", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    grade?.grade?.takeIf { it.isNotBlank() }?.let { g ->
+                        Spacer(Modifier.height(12.dp))
+                        Text("Grade $g", style = MaterialTheme.typography.titleMedium, color = LocalExtraColors.current.grade(g))
+                    }
+                } else {
+                    // no attendance kept for this semester any more, the grade is the headline
+                    GradeLetter(grade?.grade.orEmpty(), size = 120.dp)
+                    Spacer(Modifier.height(12.dp))
+                    Text(
+                        listOfNotNull(
+                            credits?.let { "${fmt(it)} credits" },
+                            grade?.gradePoint?.takeIf { it > 0 }?.let { "${fmt(it)} grade points" },
+                        ).joinToString(" · ").ifEmpty { "Grade not out yet" },
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
-                Spacer(Modifier.height(16.dp))
-                if (tally.total > 0) Verdict(tally.canMiss(target), tally.mustAttend(target), target)
             }
         }
-        item("components") { Components(subject, faculty.associate { it.component to it.facultyName }) }
+        if (subject != null) {
+            item("components") { Components(subject, faculty.associate { it.component to it.facultyName }) }
+        } else if (faculty.isNotEmpty()) {
+            item("teachers-h") { SectionHeader("Taught by") }
+            item("teachers") {
+                Group {
+                    faculty.filter { it.facultyName.isNotBlank() }.distinctBy { it.component }.forEach { f ->
+                        row { InfoRow(`in`.codelif.jportal.feature.academics.COMPONENT[f.component] ?: f.component, f.facultyName.titleCase()) }
+                    }
+                }
+            }
+        }
         if (calendar.isNotEmpty()) {
             item("cal-h") { SectionHeader("Calendar") }
             item("cal") {
@@ -138,16 +188,16 @@ fun SubjectScreen(route: Route.Subject) {
         if (marks != null && marks.scores.any { it.marks != Score.NotApplicable }) {
             item("marks-h") {
                 SectionHeader("Marks") {
-                    marksSem?.let { s -> androidx.compose.material3.TextButton(onClick = { nav.push(Route.Marks(s.id)) }) { Text("All subjects") } }
+                    TextButton(onClick = { nav.push(Route.Marks(route.semesterCode)) }) { Text("All marks") }
                 }
             }
             item("marks") { MarksStrip(marks.scores.filter { it.marks != Score.NotApplicable || it.weighted != Score.NotApplicable }) }
         }
-        if (faculty.isNotEmpty()) {
+        if (subject != null && faculty.isNotEmpty()) {
             item("credits") {
-                val credits = faculty.first().credits
+                val c = faculty.first().credits
                 Text(
-                    "${if (credits % 1.0 == 0.0) credits.toInt() else credits} credits" + if (faculty.first().isAudit) " · audit" else "",
+                    "${fmt(c)} credits" + if (faculty.first().isAudit) " · audit" else "",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
@@ -261,14 +311,14 @@ private fun MarksStrip(scores: List<`in`.codelif.ktjiit.marks.EventScore>) {
 }
 
 @Composable
-fun ScoreChip(e: `in`.codelif.ktjiit.marks.EventScore) {
+fun ScoreChip(e: `in`.codelif.ktjiit.marks.EventScore, color: Color = MaterialTheme.colorScheme.surfaceContainerLow) {
     val extra = LocalExtraColors.current
     val (main, sub, tint) = when (val m = e.marks) {
         is Score.Value -> Triple(fmt(m.obtained), "of ${fmt(m.max)}", if (m.max > 0 && m.obtained / m.max >= 0.5) extra.good else MaterialTheme.colorScheme.error)
         Score.Absent -> Triple("A", "absent", MaterialTheme.colorScheme.error)
         else -> Triple("–", "", MaterialTheme.colorScheme.onSurfaceVariant)
     }
-    Surface(shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surfaceContainerLow) {
+    Surface(shape = MaterialTheme.shapes.medium, color = color) {
         Column(Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
             Text(e.event, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Row(verticalAlignment = Alignment.Bottom) {

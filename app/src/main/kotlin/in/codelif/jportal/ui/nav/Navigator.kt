@@ -11,14 +11,15 @@ sealed interface Route {
     sealed interface Tab : Route
     data object Attendance : Tab { override val key = "attendance" }
     data object Exams : Tab { override val key = "exams" }
-    data object Grades : Tab { override val key = "grades" }
+    data object Academics : Tab { override val key = "academics" }
     data object Me : Tab { override val key = "me" }
 
-    data class Subject(val semesterId: String, val subjectId: String) : Route {
-        override val key = "subject/$semesterId/$subjectId"
+    /** codes, not portal ids, so any semester's subject opens the same way */
+    data class Subject(val semesterCode: String, val subjectCode: String) : Route {
+        override val key = "subject/$semesterCode/$subjectCode"
     }
-    data class Marks(val semesterId: String) : Route { override val key = "marks/$semesterId" }
-    data class GradeCard(val semesterId: String) : Route { override val key = "gradecard/$semesterId" }
+    data class GradeCard(val code: String) : Route { override val key = "gradecard/$code" }
+    data class Marks(val code: String) : Route { override val key = "marks/$code" }
     data object Profile : Route { override val key = "profile" }
     data object Fees : Route { override val key = "fees" }
     data object Bank : Route { override val key = "bank" }
@@ -28,7 +29,7 @@ sealed interface Route {
     data object About : Route { override val key = "about" }
 
     companion object {
-        val tabs: List<Tab> = listOf(Attendance, Exams, Grades, Me)
+        val tabs: List<Tab> = listOf(Attendance, Exams, Academics, Me)
     }
 }
 
