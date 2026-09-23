@@ -35,6 +35,7 @@ class Prefs(context: Context) {
     private val amoled = Pref("amoled", false, { k, d -> sp.getBoolean(k, d) }, { k, v -> putBoolean(k, v) })
     private val target = Pref("target", 75, { k, d -> sp.getInt(k, d) }, { k, v -> putInt(k, v) })
     private val semester = Pref<String?>("semester", null, { k, d -> sp.getString(k, d) }, { k, v -> putString(k, v) })
+    private val photo = Pref("show_photo", false, { k, d -> sp.getBoolean(k, d) }, { k, v -> putBoolean(k, v) })
     private val lastMarks = Pref<String?>("marks_seen", null, { k, d -> sp.getString(k, d) }, { k, v -> putString(k, v) })
 
     val themeModeState get() = themeMode.state
@@ -46,6 +47,8 @@ class Prefs(context: Context) {
     val semesterState get() = semester.state
     /** fingerprint of the last marks we showed, for the "new marks" card */
     val marksSeenState get() = lastMarks.state
+    /** profile photo off until tapped, people open this app around other people */
+    val photoState get() = photo.state
 
     fun setThemeMode(v: ThemeMode) = themeMode.set(v)
     fun setPalette(v: Palette) = palette.set(v)
@@ -54,9 +57,11 @@ class Prefs(context: Context) {
     fun setTarget(v: Int) = target.set(v.coerceIn(1, 100))
     fun setSemester(code: String?) = semester.set(code)
     fun setMarksSeen(v: String?) = lastMarks.set(v)
+    fun setPhoto(v: Boolean) = photo.set(v)
 
     fun clearAccountBits() {
         semester.set(null)
         lastMarks.set(null)
+        photo.set(false)
     }
 }
