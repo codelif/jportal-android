@@ -238,7 +238,7 @@ fun SignInScreen() {
             GoogleButton()
             Spacer(Modifier.height(8.dp))
             Text(
-                "Use your JIIT Google account. JPortal talks to the portal directly, nothing goes anywhere else.",
+                "Use your JIIT Google account.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
@@ -262,7 +262,7 @@ fun SignInSheet() {
         ) {
             Text("Sign in again", style = MaterialTheme.typography.headlineSmall)
             Text(
-                "The portal logs everyone out every two hours and Google wants a tap this time. Everything you see stays here.",
+                "Your portal session ran out.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
