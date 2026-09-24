@@ -29,6 +29,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import `in`.codelif.jportal.LocalGraph
@@ -66,7 +69,7 @@ val LocalBottomInset = compositionLocalOf { 0.dp }
 fun AppRoot() {
     val graph = LocalGraph.current
     val auth by graph.sessions.state.collectAsState()
-    LaunchedEffect(Unit) { graph.updates.check() }
+    LaunchedEffect(Unit) { if (!graph.demo) graph.updates.check() }
     AnimatedContent(auth is AuthState.SignedIn, transitionSpec = { fadeIn() togetherWith fadeOut() }, label = "auth") { signedIn ->
         if (signedIn) SignedIn() else SignInScreen()
     }
@@ -83,7 +86,8 @@ private fun SignedIn() {
     val pager = rememberPagerState(initialPage = Route.tabs.indexOf(nav.tab)) { Route.tabs.size }
 
     CompositionLocalProvider(LocalNavigator provides nav, LocalBottomInset provides if (onTab) barHeight else 0.dp) {
-        Box(Modifier.fillMaxSize()) {
+        // tags double as resource ids so the benchmark journeys can find the tabs
+        Box(Modifier.fillMaxSize().semantics { testTagsAsResourceId = true }) {
             // under everything: it only needs to exist, on top it would eat every tap until google answers
             if (reauth != null) ReauthHost()
             NavHost(nav, pager, Modifier.fillMaxSize()) { route -> Screen(route) }
@@ -97,7 +101,7 @@ private fun SignedIn() {
         }
         if (needsSheet) SignInSheet()
     }
-    LaunchedEffect(Unit) { graph.sessions.loadConfig() }
+    LaunchedEffect(Unit) { if (!graph.demo) graph.sessions.loadConfig() }
 }
 
 @Composable
@@ -143,6 +147,7 @@ private fun BottomBar(nav: Navigator, pager: PagerState) {
                     },
                     icon = { Ic(if (selected) spec.selectedIcon else spec.icon, null) },
                     label = { FitText(spec.label, MaterialTheme.typography.labelMedium, Modifier.padding(horizontal = 2.dp)) },
+                    modifier = Modifier.testTag("tab-${spec.tab.key}"),
                 )
             }
         }

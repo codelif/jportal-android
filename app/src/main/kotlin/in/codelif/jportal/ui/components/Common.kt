@@ -73,6 +73,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.foundation.text.TextAutoSize
 import `in`.codelif.jportal.R
+import `in`.codelif.jportal.data.AppClock
 import `in`.codelif.jportal.data.Resource
 import `in`.codelif.jportal.session.SignInRequired
 import `in`.codelif.ktjiit.http.PortalException
@@ -130,7 +131,7 @@ fun Placeholder(width: Dp, height: Dp, modifier: Modifier = Modifier) {
 @Composable
 fun CenteredLoading() = Box(Modifier.fillMaxSize().padding(top = 96.dp), contentAlignment = Alignment.TopCenter) { Loading() }
 
-fun ago(ms: Long?, now: Long = System.currentTimeMillis()): String {
+fun ago(ms: Long?, now: Long = AppClock.millis()): String {
     if (ms == null) return "never"
     val m = (now - ms) / 60_000
     return when {

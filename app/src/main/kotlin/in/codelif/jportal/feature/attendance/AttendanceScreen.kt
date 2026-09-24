@@ -29,6 +29,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.activity.compose.ReportDrawnWhen
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
@@ -116,6 +117,8 @@ fun AttendanceScreen() {
     val semNumber = meta.data?.header?.semesterNumber.orEmpty()
     val (detail, lines) = rememberAttendance(graph.repo, meta, sel.selected, semNumber)
     var editTarget by remember { mutableStateOf(false) }
+    // startup is over once the home screen shows real numbers, or knows it has none
+    ReportDrawnWhen { detail.checked && lines.none { it.counting } }
 
     val refresh = {
         graph.repo.attendanceMeta.refresh(force = true)

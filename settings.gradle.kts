@@ -25,4 +25,4 @@ rootProject.name = "jportal-android"
 // portal client lives in its own repo, pinned here as a submodule
 includeBuild("ktjiit")
 
-include(":app")
+include(":app", ":baselineprofile")

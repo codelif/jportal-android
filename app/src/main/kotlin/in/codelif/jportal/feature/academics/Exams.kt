@@ -34,6 +34,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import `in`.codelif.jportal.LocalGraph
 import `in`.codelif.jportal.R
+import `in`.codelif.jportal.data.AppClock
 import `in`.codelif.jportal.data.Resource
 import `in`.codelif.jportal.feature.attendance.titleCase
 import `in`.codelif.jportal.feature.subject.byCode
@@ -116,7 +117,7 @@ fun LazyListScope.examsContent(view: ExamsView) {
         return
     }
     // a paper stays "up next" through its sitting, three hours covers the longest one
-    val cutoff = LocalDateTime.now().minusHours(3)
+    val cutoff = AppClock.now().minusHours(3)
     val (upcoming, past) = view.papers.partition { (it.start ?: LocalDateTime.MAX) >= cutoff }
     val ahead = upcoming.sortedWith(compareBy(nullsLast()) { it.start })
 
@@ -144,7 +145,7 @@ private val MONTH = DateTimeFormatter.ofPattern("MMM")
 @Composable
 private fun NextExam(p: Paper) {
     // ticks twice a minute so "in 2h 14m" stays honest while the screen is open
-    val now by produceState(LocalDateTime.now()) { while (true) { delay(30_000); value = LocalDateTime.now() } }
+    val now by produceState(AppClock.now()) { while (true) { delay(30_000); value = AppClock.now() } }
     val start = p.start
     val (big, small) = countdown(now, start)
     Surface(
@@ -198,7 +199,7 @@ private fun Pill(icon: Int, text: String) {
 
 @Composable
 private fun DayHeader(day: LocalDate?) {
-    val days = day?.let { ChronoUnit.DAYS.between(LocalDate.now(), it) }
+    val days = day?.let { ChronoUnit.DAYS.between(AppClock.today(), it) }
     Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(
             day?.format(DAY) ?: "Date to be announced",

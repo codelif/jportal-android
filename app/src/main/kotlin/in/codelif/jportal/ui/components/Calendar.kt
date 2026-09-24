@@ -36,6 +36,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import `in`.codelif.jportal.R
+import `in`.codelif.jportal.data.AppClock
 import `in`.codelif.jportal.domain.DayMark
 import `in`.codelif.jportal.ui.theme.LocalExtraColors
 import kotlinx.coroutines.launch
@@ -100,7 +101,7 @@ private fun MonthGrid(month: YearMonth, marks: Map<LocalDate, DayMark>, selected
     val lead = month.atDay(1).dayOfWeek.value - 1
     val days = month.lengthOfMonth()
     val rows = (lead + days + 6) / 7
-    val today = LocalDate.now()
+    val today = AppClock.today()
     Column(Modifier.fillMaxWidth().padding(horizontal = 8.dp)) {
         repeat(rows) { r ->
             Row(Modifier.fillMaxWidth()) {

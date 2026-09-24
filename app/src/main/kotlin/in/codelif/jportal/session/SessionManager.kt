@@ -30,10 +30,10 @@ class SignInRequired : Exception("sign in required")
  * refresh is unreliable, so an expired session asks the ui for a silent google
  * re-auth (hidden webview, auto_select) and waits for it.
  */
-class SessionManager(private val store: SessionStore, val transport: Transport) {
+class SessionManager(private val store: SessionStore, val transport: Transport, demo: Session? = null) {
     val auth = Auth(transport)
 
-    private val _state = MutableStateFlow<AuthState>(store.load()?.let { AuthState.SignedIn(it) } ?: AuthState.SignedOut)
+    private val _state = MutableStateFlow<AuthState>((demo ?: store.load())?.let { AuthState.SignedIn(it) } ?: AuthState.SignedOut)
     val state: StateFlow<AuthState> = _state.asStateFlow()
 
     /** non-null while a silent re-auth is wanted, the ui hosts the hidden webview for it */

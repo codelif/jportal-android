@@ -4,6 +4,7 @@ import android.app.Application
 import android.content.Context
 import androidx.compose.runtime.staticCompositionLocalOf
 import `in`.codelif.jportal.data.Cache
+import `in`.codelif.jportal.demo.Demo
 import `in`.codelif.jportal.data.Prefs
 import `in`.codelif.jportal.data.Repository
 import `in`.codelif.jportal.data.Updates
@@ -15,12 +16,13 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 
 /** the app's few singletons, built once and handed down through [LocalGraph] */
-class AppGraph(context: Context) {
+class AppGraph(context: Context, val demo: Boolean = BuildConfig.DEMO) {
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     val prefs = Prefs(context)
     val transport = Transport()
-    val sessions = SessionManager(SessionStore(context), transport)
-    val repo = Repository(Cache(context), sessions, scope)
+    val sessions = SessionManager(SessionStore(context), transport, if (demo) Demo.session else null)
+    val cache = Cache(context)
+    val repo = Repository(cache, sessions, scope, live = !demo)
     val updates = Updates(context, scope)
 
     fun signOut() {
@@ -36,7 +38,9 @@ class JPortalApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        val fresh = BuildConfig.DEMO && !getDatabasePath("cache.db").exists()
         graph = AppGraph(this)
+        if (fresh) Demo.seed(graph.cache)
     }
 }
 

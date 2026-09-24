@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.baselineprofile)
 }
 
 // release builds get their version from the signed tag, see .github/workflows/release.yml
@@ -20,6 +21,7 @@ android {
         versionCode = major * 10000 + minor * 100 + patch
         versionName = tag
         androidResources.localeFilters += "en"
+        buildConfigField("boolean", "DEMO", "false")
     }
 
     flavorDimensions += "channel"
@@ -80,6 +82,26 @@ android {
     }
 }
 
+androidComponents {
+    onVariants { v ->
+        // benchmarks and profile runs can't script a google sign in, they get the made up student instead
+        if (v.buildType == "benchmarkRelease" || v.buildType == "nonMinifiedRelease") {
+            v.buildConfigFields?.put("DEMO", com.android.build.api.variant.BuildConfigField("boolean", "true", null))
+        }
+    }
+}
+
+baselineProfile {
+    // generated on a device by hand, see baselineprofile/, then checked in
+    automaticGenerationDuringBuild = false
+    saveInSrc = true
+    // one profile for both flavors, they run the same code
+    mergeIntoMain = true
+    // the demo student never ships, its classes have no business in the profile
+    filter { exclude("in.codelif.jportal.demo.**") }
+    dexLayoutOptimization = true
+}
+
 kotlin {
     compilerOptions {
         optIn.addAll(
@@ -106,6 +128,7 @@ dependencies {
     implementation(libs.coroutines.android)
 
     testImplementation(libs.junit4)
+    baselineProfile(project(":baselineprofile"))
 
     debugImplementation(libs.compose.ui.tooling)
     implementation(libs.compose.ui.tooling.preview)

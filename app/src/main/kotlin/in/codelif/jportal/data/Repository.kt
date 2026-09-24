@@ -18,6 +18,8 @@ class Repository(
     private val cache: Cache,
     val sessions: SessionManager,
     private val scope: CoroutineScope,
+    /** false for the demo student, whose stores only ever read the disk */
+    private val live: Boolean = true,
 ) {
     private val stores = HashMap<String, Store<*>>()
 
@@ -26,7 +28,7 @@ class Repository(
 
     @Suppress("UNCHECKED_CAST")
     private fun <T> store(key: String, serializer: KSerializer<T>, maxAgeMin: Long, fetch: suspend (Portal) -> T): Store<T> =
-        stores.getOrPut(key) { Store(key, serializer, cache, sessions, scope, maxAgeMin * 60_000, limiter, fetch) } as Store<T>
+        stores.getOrPut(key) { Store(key, serializer, cache, sessions, scope, maxAgeMin * 60_000, limiter, live, fetch) } as Store<T>
 
     // attendance
 
