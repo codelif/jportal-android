@@ -51,7 +51,7 @@ jobs:
           test -n "$JPORTAL_KEYSTORE_B64" || { echo "::error::no release keystore in the repo secrets"; exit 1; }
           export JPORTAL_KEYSTORE="$RUNNER_TEMP/release.jks"
           echo "$JPORTAL_KEYSTORE_B64" | base64 -d > "$JPORTAL_KEYSTORE"
-          ./gradlew :app:assembleGithubRelease
+          ./gradlew :app:assembleGithubRelease :app:bundlePlayRelease
           rm "$JPORTAL_KEYSTORE"
 
       - name: publish
@@ -66,3 +66,33 @@ jobs:
           # a dash means a prerelease, which the in-app update check skips
           case "$tag" in *-*) pre=--prerelease ;; *) pre= ;; esac
           gh release create "$tag" "$apk" "$apk.sha256" --title "$tag" --notes-file notes.md --verify-tag $pre
+          # play shows plain text, 500 characters at most
+          mkdir whatsnew
+          sed -E 's/^#+ *//' notes.md | head -c 500 > whatsnew/whatsnew-en-US
+
+      # play's api can't take an app's very first upload, that one goes up by hand from here
+      - uses: actions/upload-artifact@v7
+        with:
+          name: play-${{ github.ref_name }}
+          path: |
+            app/build/outputs/bundle/playRelease/app-play-release.aab
+            app/build/outputs/mapping/playRelease/mapping.txt
+
+      # skipped until the service account exists
+      - id: play
+        env:
+          JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+        run: if [ -n "$JSON" ]; then echo ready=true >> "$GITHUB_OUTPUT"; fi
+
+      # test tags go to closed testing, the rest to production review
+      - if: steps.play.outputs.ready == 'true'
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: in.codelif.jportal.android
+          releaseFiles: app/build/outputs/bundle/playRelease/app-play-release.aab
+          mappingFile: app/build/outputs/mapping/playRelease/mapping.txt
+          whatsNewDirectory: whatsnew
+          releaseName: ${{ github.ref_name }}
+          track: ${{ contains(github.ref_name, '-') && 'alpha' || 'production' }}
+          status: completed
