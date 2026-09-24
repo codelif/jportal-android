@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- android 11 and older read this one instead, same deal: settings only -->
+<full-backup-content>
+    <include domain="sharedpref" path="settings.xml" />
+</full-backup-content>
