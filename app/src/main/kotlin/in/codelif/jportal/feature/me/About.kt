@@ -31,7 +31,7 @@ import `in`.codelif.jportal.R
 import `in`.codelif.jportal.data.Release
 import `in`.codelif.jportal.debug.DebugLog
 import `in`.codelif.jportal.ui.LocalNavigator
-import `in`.codelif.jportal.ui.components.Group
+import `in`.codelif.jportal.ui.components.group
 import `in`.codelif.jportal.ui.components.Ic
 import `in`.codelif.jportal.ui.components.ScreenScaffold
 import `in`.codelif.jportal.ui.components.SectionHeader
@@ -63,33 +63,27 @@ fun AboutScreen() {
         }
         update?.let { r -> item("update") { UpdateCard(r) { open(context, r.url) } } }
         item("people-h") { SectionHeader("Made possible by") }
-        item("people") {
-            Group {
-                row { Entry(R.drawable.ic_favorite, "JPortal", "Big 🍆 Energy lives on in Yash Malik") { open(context, "https://github.com/codeblech/jportal") } }
-                row { Entry(R.drawable.ic_code, "jsjiit", "ISC, portal protocol groundwork") { open(context, "https://github.com/codeblech/jsjiit") } }
-                row { Entry(R.drawable.ic_code, "pyjiit", "MIT, where it all started") { open(context, "https://github.com/codelif/pyjiit") } }
-                row { Entry(R.drawable.ic_open_in_new, "Source code", "GPL-3.0, github.com/codelif/jportal-android") { open(context, "https://github.com/codelif/jportal-android") } }
-            }
+        group("people") {
+            row { Entry(R.drawable.ic_favorite, "JPortal", "Big 🍆 Energy lives on in Yash Malik") { open(context, "https://github.com/codeblech/jportal") } }
+            row { Entry(R.drawable.ic_code, "jsjiit", "ISC, portal protocol groundwork") { open(context, "https://github.com/codeblech/jsjiit") } }
+            row { Entry(R.drawable.ic_code, "pyjiit", "MIT, where it all started") { open(context, "https://github.com/codelif/pyjiit") } }
+            row { Entry(R.drawable.ic_open_in_new, "Source code", "GPL-3.0, github.com/codelif/jportal-android") { open(context, "https://github.com/codelif/jportal-android") } }
         }
         item("lic-h") { SectionHeader("Licenses") }
-        item("lic") {
-            Group {
-                row { InfoRow("JPortal for Android, ktjiit", "GNU General Public License v3.0") }
-                row { InfoRow("Google Sans Flex", "SIL Open Font License 1.1") }
-                row { InfoRow("Material Symbols", "Apache License 2.0") }
-                row { InfoRow("AndroidX, Jetpack Compose", "Apache License 2.0") }
-                row { InfoRow("Kotlin, kotlinx.serialization, kotlinx.coroutines", "Apache License 2.0") }
-            }
+        group("lic") {
+            row { InfoRow("JPortal for Android, ktjiit", "GNU General Public License v3.0") }
+            row { InfoRow("Google Sans Flex", "SIL Open Font License 1.1") }
+            row { InfoRow("Material Symbols", "Apache License 2.0") }
+            row { InfoRow("AndroidX, Jetpack Compose", "Apache License 2.0") }
+            row { InfoRow("Kotlin, kotlinx.serialization, kotlinx.coroutines", "Apache License 2.0") }
         }
         item("debug-h") { SectionHeader("Something broken?") }
-        item("debug") {
-            Group(Modifier.padding(bottom = 16.dp)) {
-                row {
-                    Entry(R.drawable.ic_content_copy, "Copy debug report", "App, device and recent errors. No tokens, names or ids.") {
-                        val report = DebugLog.report(context, mapOf("clock skew" to graph.transport.clock.skew.toString()))
-                        scope.launch { clip.setClipEntry(android.content.ClipData.newPlainText("JPortal debug report", report).toClipEntry()) }
-                        Toast.makeText(context, "Copied, paste it into a GitHub issue", Toast.LENGTH_SHORT).show()
-                    }
+        group("debug", bottom = 16.dp) {
+            row {
+                Entry(R.drawable.ic_content_copy, "Copy debug report", "App, device and recent errors. No tokens, names or ids.") {
+                    val report = DebugLog.report(context, mapOf("clock skew" to graph.transport.clock.skew.toString()))
+                    scope.launch { clip.setClipEntry(android.content.ClipData.newPlainText("JPortal debug report", report).toClipEntry()) }
+                    Toast.makeText(context, "Copied, paste it into a GitHub issue", Toast.LENGTH_SHORT).show()
                 }
             }
         }

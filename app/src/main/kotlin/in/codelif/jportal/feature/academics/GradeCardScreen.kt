@@ -24,7 +24,7 @@ import `in`.codelif.jportal.ui.LocalNavigator
 import `in`.codelif.jportal.ui.components.CenteredLoading
 import `in`.codelif.jportal.ui.components.Frog
 import `in`.codelif.jportal.ui.components.GradeLetter
-import `in`.codelif.jportal.ui.components.Group
+import `in`.codelif.jportal.ui.components.group
 import `in`.codelif.jportal.ui.components.MessageState
 import `in`.codelif.jportal.ui.components.ScreenScaffold
 import `in`.codelif.jportal.ui.components.prettySemester
@@ -52,11 +52,9 @@ fun GradeCardScreen(route: Route.GradeCard) {
             entries.isEmpty() -> item("none") { MessageState(Frog.Sleep, "Grades aren't out yet") }
             else -> {
                 item("head") { Header(sem, entries.sumOf { it.credits }) }
-                item("rows") {
-                    Group(Modifier.padding(top = 8.dp, bottom = 16.dp)) {
-                        entries.forEach { e ->
-                            row { GradeRow(e.name, e.code, e.grade, e.credits) { nav.push(Route.Subject(route.code, e.code)) } }
-                        }
+                group("rows", top = 8.dp, bottom = 16.dp) {
+                    entries.forEach { e ->
+                        row { GradeRow(e.name, e.code, e.grade, e.credits) { nav.push(Route.Subject(route.code, e.code)) } }
                     }
                 }
             }

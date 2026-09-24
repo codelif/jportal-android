@@ -41,7 +41,7 @@ import `in`.codelif.jportal.feature.attendance.titleCase
 import `in`.codelif.jportal.feature.subject.byCode
 import `in`.codelif.jportal.feature.subject.fmt
 import `in`.codelif.jportal.ui.LocalNavigator
-import `in`.codelif.jportal.ui.components.Group
+import `in`.codelif.jportal.ui.components.group
 import `in`.codelif.jportal.ui.components.Ic
 import `in`.codelif.jportal.ui.components.ScreenScaffold
 import `in`.codelif.jportal.ui.components.SectionHeader
@@ -124,7 +124,7 @@ fun ChoicesScreen() {
                     )
                 }
             }
-            item("g-$code") { Group { rows.forEach { c -> row { ChoiceRow(c, ranked) } } } }
+            group("g-$code") { rows.forEach { c -> row { ChoiceRow(c, ranked) } } }
         }
         item("end") { Spacer(Modifier.height(16.dp)) }
     }

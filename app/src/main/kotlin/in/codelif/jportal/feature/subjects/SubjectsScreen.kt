@@ -1,6 +1,5 @@
 package `in`.codelif.jportal.feature.subjects
 
-import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -60,6 +59,7 @@ import `in`.codelif.jportal.ui.components.CenteredLoading
 import `in`.codelif.jportal.ui.components.Frog
 import `in`.codelif.jportal.ui.components.GradeLetter
 import `in`.codelif.jportal.ui.components.Group
+import `in`.codelif.jportal.ui.components.group
 import `in`.codelif.jportal.ui.components.Ic
 import `in`.codelif.jportal.ui.components.MessageState
 import `in`.codelif.jportal.ui.components.ScreenScaffold
@@ -145,7 +145,7 @@ private fun matches(s: SemesterInfo, sub: SubjectInfo, q: String, f: Set<Subject
         (q.isEmpty() || sub.name.lowercase().contains(q) || sub.code.lowercase().contains(q) ||
             sub.teachers.any { it.second.lowercase().contains(q) })
 
-/** one item per semester header and group, so filtering moves whole groups instead of redrawing one tall column */
+/** an item per header and per subject, filtering then slides rows instead of redrawing one tall column */
 private fun LazyListScope.subjects(data: Academics, query: String, f: Set<SubjectFilter>) {
     val q = query.trim().lowercase()
     val groups = data.semesters.map { s -> s to s.subjects.filter { matches(s, it, q, f) } }.filter { it.second.isNotEmpty() }
@@ -175,10 +175,12 @@ private fun LazyListScope.subjects(data: Academics, query: String, f: Set<Subjec
                 trailing = if (s.current) ({ NowBadge() }) else null,
             )
         }
-        item("g-${s.code}") {
-            val nav = LocalNavigator.current
-            Group(Modifier.animateItem().animateContentSize()) {
-                list.forEach { sub -> row { SubjectRow(sub, q) { nav.push(Route.Subject(sub.semesterCode, sub.code)) } } }
+        group("g-${s.code}", contentType = "subject", animate = true) {
+            list.forEach { sub ->
+                row(sub.code) {
+                    val nav = LocalNavigator.current
+                    SubjectRow(sub, q) { nav.push(Route.Subject(sub.semesterCode, sub.code)) }
+                }
             }
         }
     }

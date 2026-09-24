@@ -58,7 +58,7 @@ import `in`.codelif.jportal.feature.attendance.titleCase
 import `in`.codelif.jportal.ui.LocalNavigator
 import `in`.codelif.jportal.ui.components.CenteredLoading
 import `in`.codelif.jportal.ui.components.Frog
-import `in`.codelif.jportal.ui.components.Group
+import `in`.codelif.jportal.ui.components.group
 import `in`.codelif.jportal.ui.components.Ic
 import `in`.codelif.jportal.ui.components.MessageState
 import `in`.codelif.jportal.ui.components.ScreenScaffold
@@ -202,10 +202,8 @@ private fun androidx.compose.foundation.lazy.LazyListScope.form(s: FeedbackSessi
     }
     item("everyone") { Everyone(s) }
     item("rows-h") { SectionHeader("${s.forms.size} ${if (s.forms.size == 1) "form" else "forms"}") }
-    item("rows") {
-        Group(Modifier.padding(bottom = 16.dp)) {
-            s.forms.forEach { f -> row { FormRow(s, f) } }
-        }
+    group("rows", bottom = 16.dp) {
+        s.forms.forEach { f -> row(f.key) { FormRow(s, f) } }
     }
 }
 

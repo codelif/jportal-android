@@ -39,7 +39,7 @@ import `in`.codelif.jportal.data.Resource
 import `in`.codelif.jportal.feature.attendance.titleCase
 import `in`.codelif.jportal.feature.subject.byCode
 import `in`.codelif.jportal.ui.components.Frog
-import `in`.codelif.jportal.ui.components.Group
+import `in`.codelif.jportal.ui.components.group
 import `in`.codelif.jportal.ui.components.Ic
 import `in`.codelif.jportal.ui.components.MessageState
 import `in`.codelif.jportal.ui.components.CenteredLoading
@@ -126,12 +126,12 @@ fun LazyListScope.examsContent(view: ExamsView) {
         item("up-h") { SectionHeader("Coming up") }
         ahead.drop(1).groupBy { it.slot.day }.forEach { (day, list) ->
             item("day-$day") { DayHeader(day) }
-            item("papers-$day") { Group { list.forEach { p -> row { PaperRow(p, done = false) } } } }
+            group("papers-$day") { list.forEach { p -> row { PaperRow(p, done = false) } } }
         }
     }
     if (past.isNotEmpty()) {
         item("past-h") { SectionHeader("Done") }
-        item("past") { Group { past.sortedByDescending { it.start }.forEach { p -> row { PaperRow(p, done = true) } } } }
+        group("past") { past.sortedByDescending { it.start }.forEach { p -> row { PaperRow(p, done = true) } } }
     }
 }
 

@@ -37,14 +37,15 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.toClipEntry
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Dp
+import androidx.compose.foundation.lazy.LazyListScope
 import `in`.codelif.jportal.LocalGraph
 import `in`.codelif.jportal.R
 import `in`.codelif.jportal.data.Store
 import `in`.codelif.jportal.feature.attendance.titleCase
 import `in`.codelif.jportal.ui.LocalNavigator
 import `in`.codelif.jportal.ui.components.Frog
-import `in`.codelif.jportal.ui.components.Group
-import `in`.codelif.jportal.ui.components.GroupScope
+import `in`.codelif.jportal.ui.components.group
 import `in`.codelif.jportal.ui.components.Ic
 import `in`.codelif.jportal.ui.components.MessageState
 import `in`.codelif.jportal.ui.components.ScreenScaffold
@@ -83,13 +84,10 @@ fun InfoRow(label: String, value: String?, copy: String? = value, trailing: @Com
 }
 
 /** a group of info rows, blank ones dropped so the corners land on real rows */
-@Composable
-private fun InfoGroup(vararg rows: Pair<String, String?>, modifier: Modifier = Modifier, extra: GroupScope.() -> Unit = {}) {
-    Group(modifier) {
+private fun LazyListScope.infoGroup(key: String, vararg rows: Pair<String, String?>, top: Dp = 0.dp, bottom: Dp = 0.dp) =
+    group(key, top, bottom, contentType = "info") {
         rows.filter { !it.second.isNullOrBlank() }.forEach { (k, v) -> row { InfoRow(k, v) } }
-        extra()
     }
-}
 
 @Composable
 private fun <T> Page(title: String, store: Store<T>, content: androidx.compose.foundation.lazy.LazyListScope.(T) -> Unit) {
@@ -119,53 +117,48 @@ fun ProfileScreen() {
             }
         }
         item("acad-h") { SectionHeader("Academics") }
-        item("acad") {
-            InfoGroup(
-                "Program" to listOf(g.program, g.branch).filter { it.isNotBlank() }.joinToString(" · "),
-                "Semester" to g.semester.takeIf { it > 0 }?.toString(),
-                "Batch" to listOf(g.batch, g.section).filter { it.isNotBlank() }.joinToString(" · "),
-                "Admitted" to g.admissionYear,
-                "APAAR ID" to g.apaarId,
-            )
-        }
+        infoGroup(
+            "acad",
+            "Program" to listOf(g.program, g.branch).filter { it.isNotBlank() }.joinToString(" · "),
+            "Semester" to g.semester.takeIf { it > 0 }?.toString(),
+            "Batch" to listOf(g.batch, g.section).filter { it.isNotBlank() }.joinToString(" · "),
+            "Admitted" to g.admissionYear,
+            "APAAR ID" to g.apaarId,
+        )
         item("contact-h") { SectionHeader("Contact") }
-        item("contact") {
-            InfoGroup(
-                "College email" to g.collegeEmail,
-                "Personal email" to g.personalEmail,
-                "Phone" to g.phone,
-                "Address" to listOf(g.currentAddress1, g.currentAddress3, g.currentCity, g.currentState, g.currentPin).filter { it.isNotBlank() }.joinToString(", "),
-            )
-        }
+        infoGroup(
+            "contact",
+            "College email" to g.collegeEmail,
+            "Personal email" to g.personalEmail,
+            "Phone" to g.phone,
+            "Address" to listOf(g.currentAddress1, g.currentAddress3, g.currentCity, g.currentState, g.currentPin).filter { it.isNotBlank() }.joinToString(", "),
+        )
         item("family-h") { SectionHeader("Family") }
-        item("family") {
-            InfoGroup(
-                "Father" to g.fatherName.titleCase(),
-                "Mother" to g.motherName.titleCase(),
-                "Parent phone" to g.parentPhone,
-                "Parent email" to g.parentEmail,
-            )
-        }
+        infoGroup(
+            "family",
+            "Father" to g.fatherName.titleCase(),
+            "Mother" to g.motherName.titleCase(),
+            "Parent phone" to g.parentPhone,
+            "Parent email" to g.parentEmail,
+        )
         item("personal-h") { SectionHeader("Personal") }
-        item("personal") {
-            InfoGroup(
-                "Date of birth" to g.dateOfBirth,
-                "Blood group" to g.bloodGroup,
-                "Gender" to g.gender,
-                "Category" to g.category,
-                "Nationality" to g.nationality,
-            )
-        }
+        infoGroup(
+            "personal",
+            "Date of birth" to g.dateOfBirth,
+            "Blood group" to g.bloodGroup,
+            "Gender" to g.gender,
+            "Category" to g.category,
+            "Nationality" to g.nationality,
+        )
         if (p.qualifications.isNotEmpty()) {
             item("q-h") { SectionHeader("Before JIIT") }
-            item("q") {
-                InfoGroup(
-                    *p.qualifications.map { q ->
-                        "${q.code} · ${q.board} · ${q.year}" to (if (q.percent > 0) "%.1f%%".format(q.percent) else if (q.cgpa > 0) "CGPA ${q.cgpa}" else null)
-                    }.toTypedArray(),
-                    modifier = Modifier.padding(bottom = 16.dp),
-                )
-            }
+            infoGroup(
+                "q",
+                *p.qualifications.map { q ->
+                    "${q.code} · ${q.board} · ${q.year}" to (if (q.percent > 0) "%.1f%%".format(q.percent) else if (q.cgpa > 0) "CGPA ${q.cgpa}" else null)
+                }.toTypedArray(),
+                bottom = 16.dp,
+            )
         }
     }
 }
@@ -179,29 +172,27 @@ fun FeesScreen() {
             item("none") { MessageState(Frog.Sleep, "No fee records") }
             return@Page
         }
-        item("heads") {
-            Group(Modifier.padding(top = 8.dp, bottom = 16.dp)) {
-                f.heads.sortedByDescending { it.semester }.forEach { h ->
-                    row {
-                        Row(Modifier.fillMaxWidth().semantics(mergeDescendants = true) {}.padding(horizontal = 20.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Column(Modifier.weight(1f)) {
-                                Text("Semester ${h.semester}", style = MaterialTheme.typography.titleMedium)
-                                // academicyear is the same stale value on every head, so it stays out
-                                Text(
-                                    listOfNotNull(
-                                        h.type.takeIf { it.isNotBlank() },
-                                        h.waived.takeIf { it > 0 }?.let { "${rupees(it)} waived" },
-                                        h.refunded.takeIf { it > 0 }?.let { "${rupees(it)} refunded" },
-                                    ).joinToString(" · "),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                            Column(horizontalAlignment = Alignment.End) {
-                                Text("${rupees(h.paid)} paid", style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold))
-                                Text("of ${rupees(h.fee)}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                if (h.due > 0) Text("${rupees(h.due)} due", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.error)
-                            }
+        group("heads", top = 8.dp, bottom = 16.dp) {
+            f.heads.sortedByDescending { it.semester }.forEach { h ->
+                row {
+                    Row(Modifier.fillMaxWidth().semantics(mergeDescendants = true) {}.padding(horizontal = 20.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text("Semester ${h.semester}", style = MaterialTheme.typography.titleMedium)
+                            // academicyear is the same stale value on every head, so it stays out
+                            Text(
+                                listOfNotNull(
+                                    h.type.takeIf { it.isNotBlank() },
+                                    h.waived.takeIf { it > 0 }?.let { "${rupees(it)} waived" },
+                                    h.refunded.takeIf { it > 0 }?.let { "${rupees(it)} refunded" },
+                                ).joinToString(" · "),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        Column(horizontalAlignment = Alignment.End) {
+                            Text("${rupees(h.paid)} paid", style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold))
+                            Text("of ${rupees(h.fee)}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            if (h.due > 0) Text("${rupees(h.due)} due", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.error)
                         }
                     }
                 }
@@ -234,23 +225,21 @@ fun BankScreen() {
         }
     }
     Page("Bank details", LocalGraph.current.repo.bank) { b ->
-        item("rows") {
-            Group(Modifier.padding(top = 8.dp)) {
-                row {
-                    InfoRow("Account number", if (shown) b.account else masked(b.account), copy = b.account) {
-                        IconButton(onClick = { shown = !shown }) {
-                            Ic(if (shown) R.drawable.ic_visibility_off else R.drawable.ic_visibility, if (shown) "Hide" else "Show")
-                        }
+        group("rows", top = 8.dp) {
+            row {
+                InfoRow("Account number", if (shown) b.account else masked(b.account), copy = b.account) {
+                    IconButton(onClick = { shown = !shown }) {
+                        Ic(if (shown) R.drawable.ic_visibility_off else R.drawable.ic_visibility, if (shown) "Hide" else "Show")
                     }
                 }
-                listOf(
-                    "IFSC" to b.ifsc,
-                    "Bank" to b.bank.titleCase(),
-                    "Account holder" to b.holder.titleCase(),
-                    "Branch" to listOf(b.address, b.city, b.state, b.pin).filter { it.isNotBlank() }.joinToString(", "),
-                    "Status" to if (b.frozen == "Y") "Locked by the accounts office" else "Editable on the portal",
-                ).filter { it.second.isNotBlank() }.forEach { (k, v) -> row { InfoRow(k, v) } }
             }
+            listOf(
+                "IFSC" to b.ifsc,
+                "Bank" to b.bank.titleCase(),
+                "Account holder" to b.holder.titleCase(),
+                "Branch" to listOf(b.address, b.city, b.state, b.pin).filter { it.isNotBlank() }.joinToString(", "),
+                "Status" to if (b.frozen == "Y") "Locked by the accounts office" else "Editable on the portal",
+            ).filter { it.second.isNotBlank() }.forEach { (k, v) -> row { InfoRow(k, v) } }
         }
         item("hint") {
             Text(
@@ -300,13 +289,12 @@ fun HostelScreen() {
                     }
                 }
             }
-            item("dates") {
-                InfoGroup(
-                    "Allotted" to listOf(h.from, h.until).filter { it.isNotBlank() }.joinToString(" to "),
-                    "Left on" to h.leftOn,
-                    modifier = Modifier.padding(top = 8.dp),
-                )
-            }
+            infoGroup(
+                "dates",
+                "Allotted" to listOf(h.from, h.until).filter { it.isNotBlank() }.joinToString(" to "),
+                "Left on" to h.leftOn,
+                top = 8.dp,
+            )
         }
     }
 }

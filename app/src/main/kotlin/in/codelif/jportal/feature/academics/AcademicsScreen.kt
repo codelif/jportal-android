@@ -43,7 +43,7 @@ import `in`.codelif.jportal.ui.LocalBottomInset
 import `in`.codelif.jportal.ui.LocalNavigator
 import `in`.codelif.jportal.ui.components.FitText
 import `in`.codelif.jportal.ui.components.GpaChart
-import `in`.codelif.jportal.ui.components.Group
+import `in`.codelif.jportal.ui.components.group
 import `in`.codelif.jportal.ui.components.Ic
 import `in`.codelif.jportal.ui.components.ScreenScaffold
 import `in`.codelif.jportal.ui.components.SectionHeader
@@ -168,10 +168,12 @@ private fun LazyListScope.overview(
     val graded = data.semesters.filter { it.result != null }
     if (graded.isNotEmpty()) {
         item("sems-h") { SectionHeader("Semesters") }
-        item("sems") {
-            val nav = LocalNavigator.current
-            Group(Modifier.padding(bottom = 16.dp)) {
-                graded.forEach { s -> row { SemesterRow(s) { nav.push(Route.GradeCard(s.code)) } } }
+        group("sems", bottom = 16.dp) {
+            graded.forEach { s ->
+                row {
+                    val nav = LocalNavigator.current
+                    SemesterRow(s) { nav.push(Route.GradeCard(s.code)) }
+                }
             }
         }
     }
