@@ -18,8 +18,8 @@ class Repository(
     private val cache: Cache,
     val sessions: SessionManager,
     private val scope: CoroutineScope,
-    /** false for the demo student, whose stores only ever read the disk */
-    private val live: Boolean = true,
+    /** false while the demo student is in, whose stores only ever read the disk */
+    private val live: () -> Boolean = { true },
 ) {
     private val stores = HashMap<String, Store<*>>()
 

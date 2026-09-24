@@ -218,34 +218,42 @@ private fun OtherWays() {
 
 @Composable
 fun SignInScreen() {
+    val graph = LocalGraph.current
+    val scope = rememberCoroutineScope()
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.surface) {
-        Column(
-            Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().imePadding().verticalScroll(rememberScrollState()).padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Spacer(Modifier.height(56.dp))
-            `in`.codelif.jportal.ui.components.AppMark(144.dp)
-            Spacer(Modifier.height(20.dp))
-            Text("JPortal", style = MaterialTheme.typography.displaySmall)
-            Spacer(Modifier.height(8.dp))
-            Text(
-                "Your attendance, marks and grades, without the portal.",
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-            )
-            Spacer(Modifier.height(48.dp))
-            GoogleButton()
-            Spacer(Modifier.height(8.dp))
-            Text(
-                "Use your JIIT Google account.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(horizontal = 16.dp),
-            )
-            Spacer(Modifier.height(24.dp))
-            OtherWays()
+        Box(Modifier.fillMaxSize()) {
+            Column(
+                Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().imePadding().verticalScroll(rememberScrollState()).padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Spacer(Modifier.height(56.dp))
+                `in`.codelif.jportal.ui.components.AppMark(144.dp)
+                Spacer(Modifier.height(20.dp))
+                Text("JPortal", style = MaterialTheme.typography.displaySmall)
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    "Your attendance, marks and grades, without the portal.",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                )
+                Spacer(Modifier.height(48.dp))
+                GoogleButton()
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    "Use your JIIT Google account.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                )
+                Spacer(Modifier.height(24.dp))
+                OtherWays()
+            }
+            TextButton(
+                onClick = { scope.launch { graph.startDemo() } },
+                modifier = Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(8.dp),
+            ) { Text("Demo") }
         }
     }
 }

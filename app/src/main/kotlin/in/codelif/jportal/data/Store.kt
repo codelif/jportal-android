@@ -30,7 +30,7 @@ class Store<T>(
     private val scope: CoroutineScope,
     private val maxAgeMs: Long,
     private val limiter: Semaphore,
-    private val live: Boolean,
+    private val live: () -> Boolean,
     private val fetch: suspend (Portal) -> T,
 ) {
     private val _state = MutableStateFlow<Resource<T>>(Resource())
@@ -58,7 +58,7 @@ class Store<T>(
         return scope.launch {
             loadDisk()
             val age = state.value.fetchedAt?.let { System.currentTimeMillis() - it }
-            if (!live || (!force && age != null && age < maxAgeMs)) return@launch
+            if (!live() || (!force && age != null && age < maxAgeMs)) return@launch
             _state.update { it.copy(refreshing = true) }
             try {
                 val value = limiter.withPermit { sessions.call(fetch) }

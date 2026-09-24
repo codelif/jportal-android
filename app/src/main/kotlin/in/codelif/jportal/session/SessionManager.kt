@@ -1,5 +1,6 @@
 package `in`.codelif.jportal.session
 
+import `in`.codelif.jportal.demo.Demo
 import `in`.codelif.ktjiit.api.Portal
 import `in`.codelif.ktjiit.auth.Auth
 import `in`.codelif.ktjiit.auth.PortalConfig
@@ -104,6 +105,7 @@ class SessionManager(private val store: SessionStore, val transport: Transport, 
      */
     suspend fun <T> call(block: suspend (Portal) -> T): T = withContext(Dispatchers.Default) {
         val s = valid(forceRenew = false)
+        check(!Demo.owns(s)) { "the demo student has no portal behind it" }
         try {
             block(Portal(s, transport))
         } catch (e: PortalException.SessionExpired) {

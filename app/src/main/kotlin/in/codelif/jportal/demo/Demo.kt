@@ -19,9 +19,10 @@ import java.time.format.DateTimeFormatter
 import kotlin.random.Random
 
 /**
- * a made up student for benchmarks and screenshot tests, never in a shipped
- * build. written straight into the cache under the keys the repository reads,
- * with dates counted from [AppClock] so pinned tests draw the same days.
+ * a made up student, behind the sign-in screen's demo button and in the
+ * benchmarks and screenshot tests. written straight into the cache under the
+ * keys the repository reads, with dates counted from [AppClock] so pinned
+ * tests draw the same days.
  */
 object Demo {
     val session = Session(
@@ -31,6 +32,8 @@ object Demo {
         enrollmentNo = "99103042",
         name = "YASH MALIK",
     )
+
+    fun owns(s: Session?) = s?.token == session.token
 
     private class Subj(
         val id: String,

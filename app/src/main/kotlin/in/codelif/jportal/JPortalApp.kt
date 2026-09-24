@@ -14,16 +14,26 @@ import `in`.codelif.ktjiit.http.Transport
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.withContext
 
 /** the app's few singletons, built once and handed down through [LocalGraph] */
-class AppGraph(context: Context, val demo: Boolean = BuildConfig.DEMO) {
+class AppGraph(context: Context, demo: Boolean = BuildConfig.DEMO) {
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     val prefs = Prefs(context)
     val transport = Transport()
     val sessions = SessionManager(SessionStore(context), transport, if (demo) Demo.session else null)
     val cache = Cache(context)
-    val repo = Repository(cache, sessions, scope, live = !demo)
+    val repo = Repository(cache, sessions, scope) { !this.demo }
     val updates = Updates(context, scope)
+
+    /** the made up student is signed in, nothing may touch the portal */
+    val demo: Boolean get() = Demo.owns(sessions.session)
+
+    /** signs the made up student in, from the sign-in screen's button */
+    suspend fun startDemo() {
+        withContext(Dispatchers.IO) { Demo.seed(cache) }
+        sessions.signedIn(Demo.session)
+    }
 
     fun signOut() {
         sessions.signOut()
