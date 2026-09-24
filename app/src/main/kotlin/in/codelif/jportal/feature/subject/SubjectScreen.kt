@@ -40,6 +40,7 @@ import `in`.codelif.jportal.ui.components.Group
 import androidx.compose.material3.TextButton
 import `in`.codelif.jportal.R
 import `in`.codelif.jportal.domain.AttendanceMath
+import `in`.codelif.jportal.feature.attendance.nameCase
 import `in`.codelif.jportal.feature.attendance.titleCase
 import `in`.codelif.jportal.ui.LocalNavigator
 import `in`.codelif.jportal.ui.components.AttendanceCalendar
@@ -170,7 +171,7 @@ fun SubjectScreen(route: Route.Subject) {
             item("teachers") {
                 Group {
                     faculty.filter { it.facultyName.isNotBlank() }.distinctBy { it.component }.forEach { f ->
-                        row { InfoRow(`in`.codelif.jportal.feature.academics.COMPONENT[f.component] ?: f.component, f.facultyName.titleCase()) }
+                        row { InfoRow(`in`.codelif.jportal.feature.academics.COMPONENT[f.component] ?: f.component, f.facultyName.nameCase()) }
                     }
                 }
             }
@@ -256,7 +257,7 @@ private fun Components(s: `in`.codelif.ktjiit.model.SubjectAttendance, faculty: 
                     Spacer(Modifier.width(14.dp))
                     Column(Modifier.weight(1f)) {
                         Text(name, style = MaterialTheme.typography.titleSmall)
-                        faculty[k]?.let { Text(it.titleCase(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                        faculty[k]?.let { Text(it.nameCase(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                     }
                     pct?.let { Text("${it.roundToInt()}%", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)) }
                 }
@@ -295,7 +296,7 @@ private fun ClassRow(c: ClassRecord, compact: Boolean = false) {
             Text(c.date?.format(DAY) ?: c.datetime, style = MaterialTheme.typography.bodyLarge)
             val time = listOfNotNull(c.start?.format(TIME), c.end?.format(TIME)).joinToString(" – ")
             Text(
-                listOf(time, c.classType.takeIf { it.isNotBlank() && it != "Regular" }, c.takenBy.titleCase().takeIf { it.isNotBlank() })
+                listOf(time, c.classType.takeIf { it.isNotBlank() && it != "Regular" }, c.takenBy.nameCase().takeIf { it.isNotBlank() })
                     .filterNotNull().filter { it.isNotBlank() }.joinToString(" · "),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,

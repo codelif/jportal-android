@@ -49,6 +49,7 @@ import `in`.codelif.jportal.feature.academics.Figure
 import `in`.codelif.jportal.feature.academics.SemesterInfo
 import `in`.codelif.jportal.feature.academics.SubjectInfo
 import `in`.codelif.jportal.feature.academics.rememberAcademics
+import `in`.codelif.jportal.feature.attendance.nameCase
 import `in`.codelif.jportal.feature.attendance.titleCase
 import `in`.codelif.jportal.feature.me.Entry
 import `in`.codelif.jportal.feature.registration.rememberPicked
@@ -251,7 +252,7 @@ private fun SubjectRow(s: SubjectInfo, q: String, onClick: () -> Unit) {
                 )
                 s.teachers.forEach { (k, name) ->
                     Text(
-                        hit("${COMPONENT[k] ?: k}: ${name.titleCase()}", q),
+                        hit("${COMPONENT[k] ?: k}: ${name.nameCase()}", q),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,

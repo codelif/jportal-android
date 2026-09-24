@@ -42,6 +42,7 @@ import androidx.compose.foundation.lazy.LazyListScope
 import `in`.codelif.jportal.LocalGraph
 import `in`.codelif.jportal.R
 import `in`.codelif.jportal.data.Store
+import `in`.codelif.jportal.feature.attendance.nameCase
 import `in`.codelif.jportal.feature.attendance.titleCase
 import `in`.codelif.jportal.ui.LocalNavigator
 import `in`.codelif.jportal.ui.components.Frog
@@ -111,7 +112,7 @@ fun ProfileScreen() {
             Column(Modifier.fillMaxWidth().padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 Avatar(p.photo.photo, g.name, 112)
                 Spacer(Modifier.height(12.dp))
-                Text(g.name.titleCase(), style = MaterialTheme.typography.headlineSmall)
+                Text(g.name.nameCase(), style = MaterialTheme.typography.headlineSmall)
                 Text(g.enrollmentNo, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text("Tap to copy", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 8.dp))
             }
@@ -136,8 +137,8 @@ fun ProfileScreen() {
         item("family-h") { SectionHeader("Family") }
         infoGroup(
             "family",
-            "Father" to g.fatherName.titleCase(),
-            "Mother" to g.motherName.titleCase(),
+            "Father" to g.fatherName.nameCase(),
+            "Mother" to g.motherName.nameCase(),
             "Parent phone" to g.parentPhone,
             "Parent email" to g.parentEmail,
         )
@@ -236,7 +237,7 @@ fun BankScreen() {
             listOf(
                 "IFSC" to b.ifsc,
                 "Bank" to b.bank.titleCase(),
-                "Account holder" to b.holder.titleCase(),
+                "Account holder" to b.holder.nameCase(),
                 "Branch" to listOf(b.address, b.city, b.state, b.pin).filter { it.isNotBlank() }.joinToString(", "),
                 "Status" to if (b.frozen == "Y") "Locked by the accounts office" else "Editable on the portal",
             ).filter { it.second.isNotBlank() }.forEach { (k, v) -> row { InfoRow(k, v) } }

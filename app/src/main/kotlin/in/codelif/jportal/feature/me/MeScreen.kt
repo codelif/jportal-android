@@ -35,6 +35,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import `in`.codelif.jportal.LocalGraph
 import `in`.codelif.jportal.R
+import `in`.codelif.jportal.feature.attendance.nameCase
 import `in`.codelif.jportal.feature.attendance.titleCase
 import `in`.codelif.jportal.ui.LocalBottomInset
 import `in`.codelif.jportal.ui.LocalNavigator
@@ -77,7 +78,7 @@ fun MeScreen() {
                     Avatar(personal.data?.photo?.photo, (info?.name ?: session?.name).orEmpty(), 64, revealOnly = true)
                     Spacer(Modifier.width(16.dp))
                     Column(Modifier.weight(1f)) {
-                        Text((info?.name ?: session?.name).orEmpty().titleCase(), style = MaterialTheme.typography.titleLarge)
+                        Text((info?.name ?: session?.name).orEmpty().nameCase(), style = MaterialTheme.typography.titleLarge)
                         Text(session?.enrollmentNo.orEmpty(), style = MaterialTheme.typography.bodyMedium)
                         info?.let {
                             Text(

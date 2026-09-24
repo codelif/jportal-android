@@ -367,6 +367,15 @@ private val WORDS = setOf("AND", "OF", "THE", "FOR", "IN", "TO", "LAB")
 private val SMALL = setOf("And", "Of", "The", "For", "In", "To", "Using")
 private val titled = java.util.concurrent.ConcurrentHashMap<String, String>()
 
+private val named = java.util.concurrent.ConcurrentHashMap<String, String>()
+
+/** "DR. A.K. RAO" -> "Dr. A.K. Rao". names have no acronyms, so short surnames stay words. memoised like [titleCase] */
+fun String.nameCase(): String = named.getOrPut(this) {
+    val out = StringBuilder(length)
+    for (i in indices) out.append(if (i == 0 || !this[i - 1].isLetter()) this[i].uppercaseChar() else this[i].lowercaseChar())
+    out.toString()
+}
+
 /** "DATA STRUCTURES LAB" -> "Data Structures Lab", keeps roman numerals and short acronyms. memoised, lists call it every frame they compose */
 fun String.titleCase(): String = titled.getOrPut(this) {
     split(' ').joinToString(" ") { w ->

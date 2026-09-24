@@ -37,6 +37,7 @@ import `in`.codelif.jportal.LocalGraph
 import `in`.codelif.jportal.R
 import `in`.codelif.jportal.data.Resource
 import `in`.codelif.jportal.data.Store
+import `in`.codelif.jportal.feature.attendance.nameCase
 import `in`.codelif.jportal.feature.attendance.titleCase
 import `in`.codelif.jportal.feature.subject.byCode
 import `in`.codelif.jportal.feature.subject.fmt
@@ -277,7 +278,7 @@ private fun StageRow(st: MoocStage, last: Boolean, nextDone: Boolean) {
         Spacer(Modifier.width(12.dp))
         Column(Modifier.padding(bottom = if (last) 0.dp else 16.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(st.title, style = MaterialTheme.typography.titleSmall)
-            val line = listOfNotNull(st.at?.format(STAMP), st.by?.titleCase()).joinToString(" · ")
+            val line = listOfNotNull(st.at?.format(STAMP), st.by?.nameCase()).joinToString(" · ")
             Text(
                 line.ifEmpty { if (st.done) "Done" else "Waiting" },
                 style = MaterialTheme.typography.bodySmall,
