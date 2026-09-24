@@ -10,6 +10,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.MaterialTheme
@@ -50,6 +51,7 @@ import `in`.codelif.jportal.feature.signin.SignInSheet
 import `in`.codelif.jportal.feature.subject.SubjectScreen
 import `in`.codelif.jportal.feature.subjects.SubjectsScreen
 import `in`.codelif.jportal.session.AuthState
+import `in`.codelif.jportal.ui.components.FitText
 import `in`.codelif.jportal.ui.components.Ic
 import `in`.codelif.jportal.ui.nav.NavHost
 import `in`.codelif.jportal.ui.nav.Navigator
@@ -140,7 +142,7 @@ private fun BottomBar(nav: Navigator, pager: PagerState) {
                         nav.switchTab(spec.tab)
                     },
                     icon = { Ic(if (selected) spec.selectedIcon else spec.icon, null) },
-                    label = { Text(spec.label) },
+                    label = { FitText(spec.label, MaterialTheme.typography.labelMedium, Modifier.padding(horizontal = 2.dp)) },
                 )
             }
         }

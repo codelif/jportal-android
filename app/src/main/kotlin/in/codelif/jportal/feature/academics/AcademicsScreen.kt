@@ -28,6 +28,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -38,6 +39,7 @@ import `in`.codelif.jportal.domain.Gpa
 import `in`.codelif.jportal.feature.subject.fmt
 import `in`.codelif.jportal.ui.LocalBottomInset
 import `in`.codelif.jportal.ui.LocalNavigator
+import `in`.codelif.jportal.ui.components.FitText
 import `in`.codelif.jportal.ui.components.GpaChart
 import `in`.codelif.jportal.ui.components.Group
 import `in`.codelif.jportal.ui.components.Ic
@@ -98,7 +100,7 @@ fun AcademicsScreen() {
                         onClick = { view = v },
                         shape = SegmentedButtonDefaults.itemShape(i, AcademicsView.entries.size),
                         icon = {},
-                    ) { Text(v.label) }
+                    ) { FitText(v.label, MaterialTheme.typography.labelLarge) }
                 }
             }
         },
@@ -199,7 +201,7 @@ private fun Headline(cgpa: Double?, sgpa: Double?, projected: Double?, earned: I
 
 @Composable
 private fun Big(label: String, value: Double?, color: Color) {
-    Column {
+    Column(Modifier.semantics(mergeDescendants = true) {}) {
         Text(label, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Text(value?.let { "%.2f".format(it) } ?: "–", style = NumberStyle, color = color)
     }

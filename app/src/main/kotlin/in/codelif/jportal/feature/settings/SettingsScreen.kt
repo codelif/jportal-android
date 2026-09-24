@@ -48,6 +48,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import `in`.codelif.jportal.LocalGraph
 import `in`.codelif.jportal.R
 import `in`.codelif.jportal.data.AppIcon
@@ -56,6 +61,7 @@ import `in`.codelif.jportal.data.ThemeMode
 import `in`.codelif.jportal.feature.attendance.TargetSheet
 import `in`.codelif.jportal.feature.me.Entry
 import `in`.codelif.jportal.ui.LocalNavigator
+import `in`.codelif.jportal.ui.components.FitText
 import `in`.codelif.jportal.ui.components.ScreenScaffold
 import `in`.codelif.jportal.ui.components.SectionHeader
 
@@ -145,7 +151,7 @@ private fun <T> Choice(label: String, options: List<T>, selected: T, name: (T) -
                     onClick = { onPick(o) },
                     enabled = enabled,
                     shape = SegmentedButtonDefaults.itemShape(i, options.size),
-                ) { Text(name(o)) }
+                ) { FitText(name(o), MaterialTheme.typography.labelLarge) }
             }
         }
     }
@@ -153,14 +159,16 @@ private fun <T> Choice(label: String, options: List<T>, selected: T, name: (T) -
 
 @Composable
 private fun Toggle(title: String, subtitle: String, checked: Boolean, onChange: (Boolean) -> Unit) {
-    Surface(onClick = { onChange(!checked) }, color = Color.Transparent) {
-        Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text(title, style = MaterialTheme.typography.titleMedium)
-                Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            Switch(checked, onChange)
+    // the whole row is the switch, so talkback stops on it once
+    Row(
+        Modifier.fillMaxWidth().toggleable(checked, role = Role.Switch, onValueChange = onChange).padding(horizontal = 20.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.titleMedium)
+            Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
+        Switch(checked, null)
     }
 }
 
@@ -182,7 +190,7 @@ private fun RowScope.Tile(label: String, selected: Boolean, enabled: Boolean = t
         shape = MaterialTheme.shapes.large,
         color = if (selected) scheme.secondaryContainer else scheme.surfaceContainerHigh,
         border = if (selected) BorderStroke(2.dp, scheme.primary) else null,
-        modifier = Modifier.weight(1f).alpha(if (enabled) 1f else 0.4f),
+        modifier = Modifier.weight(1f).alpha(if (enabled) 1f else 0.4f).semantics { this.selected = selected; role = Role.RadioButton },
     ) {
         Column(Modifier.padding(vertical = 14.dp).fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
             preview()

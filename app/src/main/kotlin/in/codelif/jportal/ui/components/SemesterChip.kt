@@ -21,6 +21,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.role
 import `in`.codelif.jportal.LocalGraph
 import `in`.codelif.jportal.R
 import `in`.codelif.ktjiit.model.Semester
@@ -36,6 +41,13 @@ fun prettySemester(code: String): String {
         else -> "Summer"
     }
     return "$kind ${m.groupValues[1]}"
+}
+
+/** a chip that opens a menu reads as one: what it picks, what's picked, and that it's a list */
+fun Modifier.dropdown(label: String, onOpen: () -> Unit): Modifier = clearAndSetSemantics {
+    contentDescription = label
+    role = Role.DropdownList
+    onClick { onOpen(); true }
 }
 
 class SemesterSelection(val all: List<Semester>, val selected: Semester?, val isCurrent: Boolean)
@@ -65,6 +77,7 @@ fun SemesterChip(sel: SemesterSelection, modifier: Modifier = Modifier) {
         FilterChip(
             selected = !sel.isCurrent,
             onClick = { open = true },
+            modifier = Modifier.dropdown("Semester, ${prettySemester(current.code)}") { open = true },
             label = { Text(prettySemester(current.code)) },
             trailingIcon = { Ic(R.drawable.ic_expand_more, null, Modifier.size(18.dp)) },
         )
@@ -93,6 +106,7 @@ fun SemesterPicker(semesters: List<Semester>, selected: Semester?, onPick: (Stri
             FilterChip(
                 selected = true,
                 onClick = { open = true },
+                modifier = Modifier.dropdown("Semester, ${prettySemester(sem.code)}") { open = true },
                 label = { Text(prettySemester(sem.code)) },
                 trailingIcon = { Ic(R.drawable.ic_expand_more, null, Modifier.size(18.dp)) },
             )

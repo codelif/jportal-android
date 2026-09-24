@@ -1,7 +1,7 @@
 package `in`.codelif.jportal.ui.components
 
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -14,14 +14,19 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.State
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.text.style.TextDecoration
+import java.time.format.DateTimeFormatter
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -113,50 +118,60 @@ private fun MonthGrid(month: YearMonth, marks: Map<LocalDate, DayMark>, selected
     }
 }
 
+private val SPOKEN = DateTimeFormatter.ofPattern("EEEE d MMMM")
+private val resting: State<Float> = mutableFloatStateOf(0.86f)
+
 @Composable
 private fun DayCell(date: LocalDate, mark: DayMark?, selected: Boolean, today: Boolean, onClick: () -> Unit) {
     val extra = LocalExtraColors.current
     val scheme = MaterialTheme.colorScheme
     val present = extra.goodContainer
     val absent = scheme.errorContainer
-    val scale by animateFloatAsState(if (selected) 1f else 0.86f, label = "day")
+    // read in draw only, a tap animates two cells without recomposing the month
+    val scale = if (mark != null) animateFloatAsState(if (selected) 1f else 0.86f, label = "day") else resting
     val label = when (mark) {
         DayMark.Present -> "present"
         DayMark.Absent -> "absent"
         DayMark.Mixed -> "partly present"
         null -> "no class"
     }
-    Surface(
-        onClick = onClick,
-        enabled = mark != null,
-        shape = CircleShape,
-        color = Color.Transparent,
-        modifier = Modifier.fillMaxSize().semantics { contentDescription = "$date, $label" },
-    ) {
-        Box(contentAlignment = Alignment.Center) {
-            Canvas(Modifier.fillMaxSize().padding(20.dp * (1 - scale)).clip(CircleShape)) {
-                when (mark) {
-                    DayMark.Present -> drawCircle(present)
-                    DayMark.Absent -> drawCircle(absent)
-                    DayMark.Mixed -> {
-                        drawArc(present, 90f, 180f, true, Offset.Zero, Size(size.width, size.height))
-                        drawArc(absent, -90f, 180f, true, Offset.Zero, Size(size.width, size.height))
-                    }
-                    null -> if (today) drawCircle(scheme.outlineVariant, style = androidx.compose.ui.graphics.drawscope.Stroke(1.5.dp.toPx()))
-                }
-                if (selected) drawCircle(scheme.primary, style = androidx.compose.ui.graphics.drawscope.Stroke(2.5.dp.toPx()))
+    Box(
+        Modifier.fillMaxSize().clip(CircleShape)
+            .then(if (mark != null) Modifier.clickable(onClick = onClick) else Modifier)
+            .semantics {
+                contentDescription = "${date.format(SPOKEN)}, $label"
+                if (mark != null) this.selected = selected
             }
-            Text(
-                "${date.dayOfMonth}",
-                style = MaterialTheme.typography.labelLarge,
-                color = when (mark) {
-                    DayMark.Present -> if (extra.goodContainer.luminance() > 0.5f) Color(0xFF0B3B1A) else Color(0xFFCDEFD6)
-                    DayMark.Absent -> scheme.onErrorContainer
-                    DayMark.Mixed -> scheme.onSurface
-                    null -> scheme.onSurfaceVariant.copy(alpha = 0.6f)
-                },
-            )
-        }
+            .drawBehind {
+                val inset = 20.dp.toPx() * (1 - scale.value)
+                val r = size.minDimension / 2 - inset
+                val box = Size(r * 2, r * 2)
+                val corner = Offset(center.x - r, center.y - r)
+                when (mark) {
+                    DayMark.Present -> drawCircle(present, r)
+                    DayMark.Absent -> drawCircle(absent, r)
+                    DayMark.Mixed -> {
+                        drawArc(present, 90f, 180f, true, corner, box)
+                        drawArc(absent, -90f, 180f, true, corner, box)
+                    }
+                    null -> if (today) drawCircle(scheme.outlineVariant, r, style = Stroke(1.5.dp.toPx()))
+                }
+                if (selected) drawCircle(scheme.primary, r - 1.25.dp.toPx(), style = Stroke(2.5.dp.toPx()))
+            },
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            "${date.dayOfMonth}",
+            style = MaterialTheme.typography.labelLarge,
+            // struck through when missed, so absent never rests on red alone
+            textDecoration = if (mark == DayMark.Absent) TextDecoration.LineThrough else null,
+            color = when (mark) {
+                DayMark.Present -> if (extra.goodContainer.luminance() > 0.5f) Color(0xFF0B3B1A) else Color(0xFFCDEFD6)
+                DayMark.Absent -> scheme.onErrorContainer
+                DayMark.Mixed -> scheme.onSurface
+                null -> scheme.onSurfaceVariant.copy(alpha = 0.6f)
+            },
+        )
     }
 }
 

@@ -26,6 +26,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -244,7 +245,7 @@ private fun Components(s: `in`.codelif.ktjiit.model.SubjectAttendance, faculty: 
     SectionHeader("Components")
     Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         rows.forEach { (k, name, pct) ->
-            Surface(shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surfaceContainerLow, modifier = Modifier.fillMaxWidth()) {
+            Surface(shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surfaceContainerLow, modifier = Modifier.fillMaxWidth().semantics(mergeDescendants = true) {}) {
                 Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
                     Surface(shape = CircleShape, color = MaterialTheme.colorScheme.secondaryContainer, modifier = Modifier.size(36.dp)) {
                         Text(k, style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 7.dp), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
@@ -282,7 +283,7 @@ private fun ClassRow(c: ClassRecord, compact: Boolean = false) {
     val extra = LocalExtraColors.current
     val color = if (c.isPresent) extra.good else MaterialTheme.colorScheme.error
     Row(
-        Modifier.fillMaxWidth().padding(horizontal = if (compact) 4.dp else 20.dp, vertical = 10.dp),
+        Modifier.fillMaxWidth().semantics(mergeDescendants = true) {}.padding(horizontal = if (compact) 4.dp else 20.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Ic(if (c.isPresent) R.drawable.ic_check_circle else R.drawable.ic_cancel, if (c.isPresent) "Present" else "Absent", Modifier.size(22.dp), color)
@@ -319,7 +320,7 @@ fun ScoreChip(e: `in`.codelif.ktjiit.marks.EventScore, color: Color = MaterialTh
         Score.Absent -> Triple("A", "absent", MaterialTheme.colorScheme.error)
         else -> Triple("–", "", MaterialTheme.colorScheme.onSurfaceVariant)
     }
-    Surface(shape = MaterialTheme.shapes.medium, color = color) {
+    Surface(shape = MaterialTheme.shapes.medium, color = color, modifier = Modifier.semantics(mergeDescendants = true) {}) {
         Column(Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
             Text(e.event, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Row(verticalAlignment = Alignment.Bottom) {

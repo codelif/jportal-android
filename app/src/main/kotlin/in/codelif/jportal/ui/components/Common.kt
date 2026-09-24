@@ -62,6 +62,14 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.semantics.ProgressBarRangeInfo
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.progressBarRangeInfo
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.foundation.text.TextAutoSize
 import `in`.codelif.jportal.R
 import `in`.codelif.jportal.data.Resource
 import `in`.codelif.jportal.session.SignInRequired
@@ -84,7 +92,10 @@ fun Loading(modifier: Modifier = Modifier, size: Dp = 48.dp, color: Color = Mate
     val spin by t.animateFloat(0f, 360f, infiniteRepeatable(tween(2600, easing = LinearEasing)), label = "spin")
     val morph by t.animateFloat(0f, 1f, infiniteRepeatable(tween(1300), RepeatMode.Reverse), label = "morph")
     val path = remember { Path() }
-    Canvas(modifier.size(size).graphicsLayer { rotationZ = spin }) {
+    Canvas(
+        modifier.size(size).graphicsLayer { rotationZ = spin }
+            .semantics { contentDescription = "Loading"; progressBarRangeInfo = ProgressBarRangeInfo.Indeterminate },
+    ) {
         val r = this.size.minDimension / 2f * 0.82f
         val lobes = 5f + 3f * morph
         val depth = 0.10f + 0.06f * (1f - morph)
@@ -172,6 +183,13 @@ fun StaleNotice(res: Resource<*>, onRetry: () -> Unit, modifier: Modifier = Modi
     }
 }
 
+/** one line that shrinks instead of breaking mid-word, for labels in spots that can't grow at big font sizes */
+@Composable
+fun FitText(text: String, style: TextStyle, modifier: Modifier = Modifier, color: Color = Color.Unspecified) = Text(
+    text, modifier, color = color, style = style, maxLines = 1, softWrap = false,
+    autoSize = TextAutoSize.StepBased(minFontSize = 8.sp, maxFontSize = style.fontSize, stepSize = 0.5.sp),
+)
+
 /** the frog's moods, one per kind of empty */
 enum class Frog(@DrawableRes val art: Int) {
     Sleep(R.drawable.frog_sleep),
@@ -221,7 +239,7 @@ fun <T> LazyListScope.resourceStates(res: Resource<T>, onRetry: () -> Unit, empt
 @Composable
 fun SectionHeader(text: String, modifier: Modifier = Modifier, trailing: @Composable (() -> Unit)? = null) {
     Row(modifier.fillMaxWidth().padding(start = 20.dp, end = 12.dp, top = 20.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text(text, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary, modifier = Modifier.weight(1f))
+        Text(text, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary, modifier = Modifier.weight(1f).semantics { heading() })
         trailing?.invoke()
     }
 }
@@ -254,7 +272,7 @@ fun ScreenScaffold(
                 LargeTopAppBar(
                     title = {
                         Column {
-                            Text(title, maxLines = 1)
+                            Text(title, maxLines = 1, modifier = Modifier.semantics { heading() })
                             if (subtitle != null) {
                                 Text(subtitle, maxLines = 1, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }

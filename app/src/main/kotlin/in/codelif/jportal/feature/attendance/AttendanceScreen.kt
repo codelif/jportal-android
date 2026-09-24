@@ -14,6 +14,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
+import `in`.codelif.jportal.ui.components.FitText
 import `in`.codelif.jportal.ui.components.Loading
 import `in`.codelif.jportal.ui.components.Placeholder
 import androidx.compose.foundation.layout.Arrangement
@@ -174,9 +175,10 @@ private fun Overview(lines: List<SubjectLine>, target: Int, onTarget: () -> Unit
                 if (waiting > 0) {
                     Loading(size = 40.dp)
                 } else {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("${percent.roundToInt()}", style = NumberStyle.copy(fontSize = 36.sp, lineHeight = 38.sp))
-                        Text("percent", style = MaterialTheme.typography.labelSmall)
+                    // the ring can't grow with the font, so its inside shrinks to fit instead
+                    Column(Modifier.padding(horizontal = 18.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        FitText("${percent.roundToInt()}", NumberStyle.copy(fontSize = 36.sp, lineHeight = 38.sp))
+                        FitText("percent", MaterialTheme.typography.labelSmall)
                     }
                 }
             }
@@ -192,7 +194,7 @@ private fun Overview(lines: List<SubjectLine>, target: Int, onTarget: () -> Unit
                     },
                     style = MaterialTheme.typography.titleLarge,
                 )
-                // always one line here, so the card keeps its height through every state
+                // one line at normal sizes in every state, so the card keeps its height while lists land
                 Text(
                     when {
                         waiting > 0 -> "${lines.size - waiting} of ${lines.size} subjects in"
@@ -201,7 +203,7 @@ private fun Overview(lines: List<SubjectLine>, target: Int, onTarget: () -> Unit
                         else -> "${total.attended} of ${total.total} classes attended"
                     },
                     style = MaterialTheme.typography.bodyMedium,
-                    maxLines = 1,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
                 Surface(
@@ -236,9 +238,10 @@ private fun SubjectCard(line: SubjectLine, target: Int, modifier: Modifier = Mod
             val ring = if (line.counting) Modifier.pulsing() else Modifier
             AttendanceRing(if (started) line.percent else 0f, target, ring.shared("ring-${s.subjectId}"), size = 60.dp, stroke = 6.dp) {
                 if (!line.counting) {
-                    Text(
+                    FitText(
                         if (started) "${line.percent.roundToInt()}" else "–",
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        Modifier.padding(horizontal = 8.dp).semantics { contentDescription = if (started) "${line.percent.roundToInt()} percent" else "not started" },
                         color = if (started) androidx.compose.ui.graphics.Color.Unspecified else MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
@@ -257,6 +260,7 @@ private fun SubjectCard(line: SubjectLine, target: Int, modifier: Modifier = Mod
                         line.tally != null -> {
                             Text(
                                 "${line.tally.attended}/${line.tally.total}",
+                                modifier = Modifier.semantics { contentDescription = "${line.tally.attended} of ${line.tally.total} classes" },
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -341,14 +345,18 @@ fun ComponentTags(s: SubjectAttendance) {
         s.tutorialComponent?.let { "T" to s.tutorialPercent },
         s.practicalComponent?.let { "P" to s.practicalPercent },
     ).forEach { (k, _) ->
-        Surface(shape = MaterialTheme.shapes.extraSmall, color = MaterialTheme.colorScheme.secondaryContainer) {
+        Surface(
+            shape = MaterialTheme.shapes.extraSmall,
+            color = MaterialTheme.colorScheme.secondaryContainer,
+            modifier = Modifier.semantics { contentDescription = `in`.codelif.jportal.feature.academics.COMPONENT[k] ?: k },
+        ) {
             Text(k, style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.dp))
         }
     }
 }
 
 private val ROMAN = Regex("(?i)^(i{1,3}|iv|v|vi{0,3}|ix|x)(-\\w+)?$")
-private val WORDS = setOf("AND", "OF", "THE", "FOR", "IN", "TO")
+private val WORDS = setOf("AND", "OF", "THE", "FOR", "IN", "TO", "LAB")
 private val SMALL = setOf("And", "Of", "The", "For", "In", "To", "Using")
 private val titled = java.util.concurrent.ConcurrentHashMap<String, String>()
 
@@ -358,7 +366,7 @@ fun String.titleCase(): String = titled.getOrPut(this) {
         when {
             w.isEmpty() -> w
             w.matches(ROMAN) -> w.uppercase()
-            w.length <= 3 && w.none { it.isLowerCase() } && w.any { it.isLetter() } && w !in WORDS -> w
+            w.length <= 3 && w.none { it.isLowerCase() } && w.any { it.isLetter() } && w !in WORDS && !w.endsWith('.') -> w
             w.any { it.isLowerCase() } -> w
             else -> w.lowercase().replaceFirstChar { it.uppercase() }.let { if (it in SMALL) it.lowercase() else it }
         }

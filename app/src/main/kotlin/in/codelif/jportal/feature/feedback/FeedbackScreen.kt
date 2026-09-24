@@ -42,6 +42,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -231,6 +233,7 @@ private fun Everyone(s: FeedbackSession) {
                 valueRange = 0f..4f,
                 steps = 3,
                 enabled = !s.busy,
+                modifier = Modifier.semantics { stateDescription = s.everyone.label },
             )
             Row {
                 Text(Rating.UNSATISFIED.label, style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f))

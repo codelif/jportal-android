@@ -2,6 +2,7 @@ package `in`.codelif.jportal.feature.academics
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -27,6 +28,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -162,7 +164,7 @@ private fun NextExam(p: Paper) {
                 Text(small, style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(bottom = 6.dp))
             }
             Spacer(Modifier.height(12.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 start?.let { Pill(R.drawable.ic_schedule, "${it.format(SHORT)} · ${p.slot.start?.format(TIME) ?: p.slot.from}") }
                 if (p.slot.room.isNotBlank()) Pill(R.drawable.ic_meeting_room, p.slot.room + if (p.slot.seat.isNotBlank()) " · ${p.slot.seat}" else "")
             }
@@ -223,7 +225,7 @@ private fun DayHeader(day: LocalDate?) {
 private fun PaperRow(p: Paper, done: Boolean) {
     val s = p.slot
     Row(
-        Modifier.fillMaxWidth().alpha(if (done) 0.6f else 1f).padding(horizontal = 16.dp, vertical = 14.dp),
+        Modifier.fillMaxWidth().alpha(if (done) 0.6f else 1f).semantics(mergeDescendants = true) {}.padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.widthIn(min = 52.dp), horizontalAlignment = Alignment.CenterHorizontally) {

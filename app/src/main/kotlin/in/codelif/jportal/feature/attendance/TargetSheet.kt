@@ -22,6 +22,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import `in`.codelif.jportal.ui.components.AttendanceRing
 import `in`.codelif.jportal.ui.theme.NumberStyle
 
@@ -55,6 +57,7 @@ fun TargetSheet(current: Int, onDone: (Int) -> Unit) {
                 },
                 valueRange = 50f..100f,
                 steps = 49,
+                modifier = Modifier.semantics { stateDescription = "$value percent" },
             )
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                 Button(onClick = { onDone(value) }) { Text("Done") }

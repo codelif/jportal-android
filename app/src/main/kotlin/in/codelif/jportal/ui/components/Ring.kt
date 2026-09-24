@@ -9,6 +9,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.withFrameNanos
 import `in`.codelif.jportal.ui.nav.LocalOnScreen
@@ -84,7 +87,9 @@ fun AttendanceRing(
         Canvas(Modifier.size(size)) {
             drawRing(path, sweep.value, target / 100f, amp.value, phase.floatValue, color, scheme.surfaceContainerHighest, scheme.onSurfaceVariant, stroke.toPx())
         }
-        content()
+        // the ring is a fixed size graphic, text inside it can grow a little with the font but not past the stroke
+        val d = LocalDensity.current
+        CompositionLocalProvider(LocalDensity provides Density(d.density, d.fontScale.coerceAtMost(1.3f)), content = content)
     }
 }
 
