@@ -34,6 +34,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LargeTopAppBar
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -62,6 +63,11 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
@@ -266,6 +272,15 @@ fun ScreenScaffold(
     content: LazyListScope.() -> Unit,
 ) {
     val behavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+    // a long title gets a second line when open, the bar grows by that line so nothing is cut
+    val big = MaterialTheme.typography.headlineMedium
+    val measurer = rememberTextMeasurer(cacheSize = 0)
+    val density = LocalDensity.current
+    val width = LocalWindowInfo.current.containerSize.width - with(density) { 32.dp.roundToPx() }
+    val extra = remember(title, big, density, width) {
+        val lines = measurer.measure(title, big, maxLines = 2, constraints = Constraints(maxWidth = width.coerceAtLeast(0))).lineCount
+        if (lines > 1) with(density) { big.lineHeight.toDp() } else 0.dp
+    }
     Scaffold(
         modifier = modifier,
         containerColor = MaterialTheme.colorScheme.surface,
@@ -274,8 +289,15 @@ fun ScreenScaffold(
             Column {
                 LargeTopAppBar(
                     title = {
+                        // the bar draws this slot twice, big in the open row and small in the collapsed one
+                        val expanded = LocalTextStyle.current.fontSize == big.fontSize
                         Column {
-                            Text(title, maxLines = 1, modifier = Modifier.semantics { heading() })
+                            Text(
+                                title,
+                                maxLines = if (expanded) 2 else 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.semantics { heading() },
+                            )
                             if (subtitle != null) {
                                 Text(subtitle, maxLines = 1, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
@@ -285,6 +307,8 @@ fun ScreenScaffold(
                         if (onBack != null) IconButton(onClick = onBack) { Ic(R.drawable.ic_arrow_back, "Back") }
                     },
                     actions = actions,
+                    collapsedHeight = TopAppBarDefaults.LargeAppBarCollapsedHeight,
+                    expandedHeight = TopAppBarDefaults.LargeAppBarExpandedHeight + extra,
                     scrollBehavior = behavior,
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = MaterialTheme.colorScheme.surface,
