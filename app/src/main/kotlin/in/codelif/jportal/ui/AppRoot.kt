@@ -82,6 +82,8 @@ private fun SignedIn() {
 
     CompositionLocalProvider(LocalNavigator provides nav, LocalBottomInset provides if (onTab) barHeight else 0.dp) {
         Box(Modifier.fillMaxSize()) {
+            // under everything: it only needs to exist, on top it would eat every tap until google answers
+            if (reauth != null) ReauthHost()
             NavHost(nav, pager, Modifier.fillMaxSize()) { route -> Screen(route) }
 
             AnimatedVisibility(
@@ -90,8 +92,6 @@ private fun SignedIn() {
                 enter = slideInVertically { it } + fadeIn(),
                 exit = slideOutVertically { it } + fadeOut(),
             ) { BottomBar(nav, pager) }
-
-            if (reauth != null) ReauthHost()
         }
         if (needsSheet) SignInSheet()
     }

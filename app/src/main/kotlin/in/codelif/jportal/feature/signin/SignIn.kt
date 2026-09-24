@@ -309,6 +309,8 @@ fun ReauthHost() {
                     onPopup = { p -> p?.destroy(); if (p != null) { done = true; graph.sessions.reauthFailed() } },
                 ).apply {
                     isFocusable = false
+                    // invisible, so talkback mustn't land on it either
+                    importantForAccessibility = android.view.View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
                     loadUrl(PortalWeb.signinUrl(cid, silent = true, dark = false, widthPx = 320))
                 }
             },
