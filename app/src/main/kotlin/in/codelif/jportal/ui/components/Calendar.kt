@@ -5,8 +5,12 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.drawText
+import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.runtime.remember
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
@@ -35,6 +39,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalDensity
 import `in`.codelif.jportal.R
 import `in`.codelif.jportal.data.AppClock
 import `in`.codelif.jportal.domain.DayMark
@@ -90,14 +95,23 @@ fun AttendanceCalendar(
                 )
             }
         }
+        // the same 31 numbers on every month of every subject, laid out once when first drawn instead of a text node per cell
+        val measurer = rememberTextMeasurer(cacheSize = 0)
+        val style = MaterialTheme.typography.labelLarge
+        val density = LocalDensity.current
+        val numbers = remember(style, density) {
+            if (dayNumbers.size > 4) dayNumbers.clear()
+            dayNumbers.getOrPut(style to density) { arrayOfNulls(31) }
+        }
+        val number = remember(numbers, measurer) { { n: Int -> numbers[n - 1] ?: measurer.measure("$n", style).also { numbers[n - 1] = it } } }
         HorizontalPager(pager, Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) { page ->
-            MonthGrid(months[page], marks, selected, onSelect)
+            MonthGrid(months[page], marks, selected, number, onSelect)
         }
     }
 }
 
 @Composable
-private fun MonthGrid(month: YearMonth, marks: Map<LocalDate, DayMark>, selected: LocalDate?, onSelect: (LocalDate) -> Unit) {
+private fun MonthGrid(month: YearMonth, marks: Map<LocalDate, DayMark>, selected: LocalDate?, number: (Int) -> TextLayoutResult, onSelect: (LocalDate) -> Unit) {
     val lead = month.atDay(1).dayOfWeek.value - 1
     val days = month.lengthOfMonth()
     val rows = (lead + days + 6) / 7
@@ -107,11 +121,12 @@ private fun MonthGrid(month: YearMonth, marks: Map<LocalDate, DayMark>, selected
             Row(Modifier.fillMaxWidth()) {
                 repeat(7) { c ->
                     val n = r * 7 + c - lead + 1
-                    Box(Modifier.weight(1f).aspectRatio(1f).padding(3.dp), contentAlignment = Alignment.Center) {
-                        if (n in 1..days) {
-                            val date = month.atDay(n)
-                            DayCell(date, marks[date], date == selected, date == today) { if (marks[date] != null) onSelect(date) }
-                        }
+                    val cell = Modifier.weight(1f).aspectRatio(1f).padding(3.dp)
+                    if (n in 1..days) {
+                        val date = month.atDay(n)
+                        DayCell(date, marks[date], date == selected, date == today, { number(n) }, cell) { if (marks[date] != null) onSelect(date) }
+                    } else {
+                        Spacer(cell)
                     }
                 }
             }
@@ -119,11 +134,13 @@ private fun MonthGrid(month: YearMonth, marks: Map<LocalDate, DayMark>, selected
     }
 }
 
+private val dayNumbers = HashMap<Pair<androidx.compose.ui.text.TextStyle, androidx.compose.ui.unit.Density>, Array<TextLayoutResult?>>()
+
 private val SPOKEN = DateTimeFormatter.ofPattern("EEEE d MMMM")
 private val resting: State<Float> = mutableFloatStateOf(0.86f)
 
 @Composable
-private fun DayCell(date: LocalDate, mark: DayMark?, selected: Boolean, today: Boolean, onClick: () -> Unit) {
+private fun DayCell(date: LocalDate, mark: DayMark?, selected: Boolean, today: Boolean, number: () -> TextLayoutResult, modifier: Modifier, onClick: () -> Unit) {
     val extra = LocalExtraColors.current
     val scheme = MaterialTheme.colorScheme
     val present = extra.goodContainer
@@ -136,8 +153,14 @@ private fun DayCell(date: LocalDate, mark: DayMark?, selected: Boolean, today: B
         DayMark.Mixed -> "partly present"
         null -> "no class"
     }
+    val ink = when (mark) {
+        DayMark.Present -> if (extra.goodContainer.luminance() > 0.5f) Color(0xFF0B3B1A) else Color(0xFFCDEFD6)
+        DayMark.Absent -> scheme.onErrorContainer
+        DayMark.Mixed -> scheme.onSurface
+        null -> scheme.onSurfaceVariant.copy(alpha = 0.6f)
+    }
     Box(
-        Modifier.fillMaxSize().clip(CircleShape)
+        modifier.clip(CircleShape)
             .then(if (mark != null) Modifier.clickable(onClick = onClick) else Modifier)
             .semantics {
                 contentDescription = "${date.format(SPOKEN)}, $label"
@@ -158,22 +181,15 @@ private fun DayCell(date: LocalDate, mark: DayMark?, selected: Boolean, today: B
                     null -> if (today) drawCircle(scheme.outlineVariant, r, style = Stroke(1.5.dp.toPx()))
                 }
                 if (selected) drawCircle(scheme.primary, r - 1.25.dp.toPx(), style = Stroke(2.5.dp.toPx()))
+                // struck through when missed, so absent never rests on red alone
+                val text = number()
+                drawText(
+                    text, ink,
+                    Offset(center.x - text.size.width / 2f, center.y - text.size.height / 2f),
+                    textDecoration = if (mark == DayMark.Absent) TextDecoration.LineThrough else null,
+                )
             },
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            "${date.dayOfMonth}",
-            style = MaterialTheme.typography.labelLarge,
-            // struck through when missed, so absent never rests on red alone
-            textDecoration = if (mark == DayMark.Absent) TextDecoration.LineThrough else null,
-            color = when (mark) {
-                DayMark.Present -> if (extra.goodContainer.luminance() > 0.5f) Color(0xFF0B3B1A) else Color(0xFFCDEFD6)
-                DayMark.Absent -> scheme.onErrorContainer
-                DayMark.Mixed -> scheme.onSurface
-                null -> scheme.onSurfaceVariant.copy(alpha = 0.6f)
-            },
-        )
-    }
+    )
 }
 
 private fun Color.luminance(): Float = 0.2126f * red + 0.7152f * green + 0.0722f * blue
