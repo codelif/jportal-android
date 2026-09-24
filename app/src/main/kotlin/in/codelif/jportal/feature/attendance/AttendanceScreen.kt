@@ -369,10 +369,15 @@ private val titled = java.util.concurrent.ConcurrentHashMap<String, String>()
 
 private val named = java.util.concurrent.ConcurrentHashMap<String, String>()
 
-/** "DR. A.K. RAO" -> "Dr. A.K. Rao". names have no acronyms, so short surnames stay words. memoised like [titleCase] */
+/** "DR. A.K.  RAO" -> "Dr. A.K. Rao". names have no acronyms, so short surnames stay words. the portal pads some with double spaces. memoised like [titleCase] */
 fun String.nameCase(): String = named.getOrPut(this) {
-    val out = StringBuilder(length)
-    for (i in indices) out.append(if (i == 0 || !this[i - 1].isLetter()) this[i].uppercaseChar() else this[i].lowercaseChar())
+    val s = trim()
+    val out = StringBuilder(s.length)
+    for (i in s.indices) {
+        val c = s[i]
+        if (c.isWhitespace()) { if (!s[i - 1].isWhitespace()) out.append(' ') }
+        else out.append(if (i == 0 || !s[i - 1].isLetter()) c.uppercaseChar() else c.lowercaseChar())
+    }
     out.toString()
 }
 
