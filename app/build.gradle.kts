@@ -3,6 +3,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.baselineprofile)
+    alias(libs.plugins.roborazzi)
 }
 
 // release builds get their version from the signed tag, see .github/workflows/release.yml
@@ -75,6 +76,16 @@ android {
         resources.excludes += listOf("/META-INF/{AL2.0,LGPL2.1}", "DebugProbesKt.bin", "kotlin-tooling-metadata.json", "/META-INF/*.version")
     }
 
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true
+            all {
+                it.systemProperty("robolectric.pixelCopyRenderMode", "hardware")
+                it.maxHeapSize = "2g"
+            }
+        }
+    }
+
     dependenciesInfo {
         // f-droid and obtainium folks dislike the encrypted blob, play doesn't need it
         includeInApk = false
@@ -89,6 +100,11 @@ androidComponents {
             v.buildConfigFields?.put("DEMO", com.android.build.api.variant.BuildConfigField("boolean", "true", null))
         }
     }
+}
+
+roborazzi {
+    // reference images live with the tests, record with -Proborazzi.test.record=true
+    outputDir.set(file("src/test/screenshots"))
 }
 
 baselineProfile {
@@ -128,6 +144,14 @@ dependencies {
     implementation(libs.coroutines.android)
 
     testImplementation(libs.junit4)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.roborazzi)
+    testImplementation(libs.roborazzi.compose)
+    testImplementation(libs.roborazzi.junit)
+    testImplementation(libs.androidx.test.core)
+    testImplementation(platform(libs.compose.bom))
+    testImplementation(libs.compose.ui.test)
+    debugImplementation(libs.compose.ui.test.manifest)
     baselineProfile(project(":baselineprofile"))
 
     debugImplementation(libs.compose.ui.tooling)
