@@ -28,6 +28,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -82,6 +84,7 @@ fun AcademicsScreen() {
         }
     }
 
+    val haptics = LocalHapticFeedback.current
     ScreenScaffold(
         title = "Academics",
         refreshing = when (view) {
@@ -97,7 +100,7 @@ fun AcademicsScreen() {
                 AcademicsView.entries.forEachIndexed { i, v ->
                     SegmentedButton(
                         selected = view == v,
-                        onClick = { view = v },
+                        onClick = { if (view != v) haptics.performHapticFeedback(HapticFeedbackType.SegmentTick); view = v },
                         shape = SegmentedButtonDefaults.itemShape(i, AcademicsView.entries.size),
                         icon = {},
                     ) { FitText(v.label, MaterialTheme.typography.labelLarge) }

@@ -26,6 +26,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -87,6 +89,7 @@ fun SubjectScreen(route: Route.Subject) {
     val calendar = remember(classes) { AttendanceMath.calendar(classes) }
     val trend = remember(classes) { AttendanceMath.trend(classes).map { it.second.toFloat() } }
     var day by rememberSaveable { mutableStateOf<String?>(null) }
+    val haptics = LocalHapticFeedback.current
     val selectedDay = day?.let(LocalDate::parse)
 
     // teachers and credits live under the subject registrations
@@ -175,7 +178,7 @@ fun SubjectScreen(route: Route.Subject) {
         if (calendar.isNotEmpty()) {
             item("cal-h") { SectionHeader("Calendar") }
             item("cal") {
-                AttendanceCalendar(calendar, selectedDay, { day = if (it == selectedDay) null else it.toString() }, Modifier.padding(horizontal = 8.dp))
+                AttendanceCalendar(calendar, selectedDay, { haptics.performHapticFeedback(HapticFeedbackType.SegmentTick); day = if (it == selectedDay) null else it.toString() }, Modifier.padding(horizontal = 8.dp))
             }
             item("day") {
                 AnimatedVisibility(selectedDay != null) {

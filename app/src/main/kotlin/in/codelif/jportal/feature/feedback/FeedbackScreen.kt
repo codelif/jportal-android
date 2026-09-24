@@ -181,7 +181,14 @@ fun FeedbackScreen() {
         }
     }
     // once everything's in, the me tab's "open" count should catch up
-    LaunchedEffect(session?.done) { if (session?.done == true) store.refresh(force = true) }
+    val haptics = LocalHapticFeedback.current
+    LaunchedEffect(session?.done) {
+        if (session?.done == true) {
+            haptics.performHapticFeedback(HapticFeedbackType.Confirm)
+            store.refresh(force = true)
+        }
+    }
+    LaunchedEffect(session?.failed) { if (session?.failed == true) haptics.performHapticFeedback(HapticFeedbackType.Reject) }
 }
 
 private fun androidx.compose.foundation.lazy.LazyListScope.form(s: FeedbackSession) {

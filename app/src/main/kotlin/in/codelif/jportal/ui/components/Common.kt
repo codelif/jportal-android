@@ -54,6 +54,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.graphicsLayer
@@ -316,7 +318,12 @@ fun ScreenScaffold(
                 snapshotFlow { busy }.first { !it }
                 pulled = false
             }
-            PullToRefreshBox(isRefreshing = pulled && refreshing, onRefresh = { pulled = true; onRefresh() }, modifier = box) {
+            val haptics = LocalHapticFeedback.current
+            PullToRefreshBox(
+                isRefreshing = pulled && refreshing,
+                onRefresh = { haptics.performHapticFeedback(HapticFeedbackType.GestureThresholdActivate); pulled = true; onRefresh() },
+                modifier = box,
+            ) {
                 list()
                 if (refreshing && !pulled) LinearProgressIndicator(Modifier.fillMaxWidth().height(3.dp))
             }

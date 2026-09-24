@@ -46,6 +46,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.selection.toggleable
@@ -142,13 +144,14 @@ fun SettingsScreen() {
 
 @Composable
 private fun <T> Choice(label: String, options: List<T>, selected: T, name: (T) -> String, enabled: Boolean = true, onPick: (T) -> Unit) {
+    val haptics = LocalHapticFeedback.current
     Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 14.dp)) {
         Text(label, style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(bottom = 10.dp))
         SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
             options.forEachIndexed { i, o ->
                 SegmentedButton(
                     selected = o == selected,
-                    onClick = { onPick(o) },
+                    onClick = { if (o != selected) haptics.performHapticFeedback(HapticFeedbackType.SegmentTick); onPick(o) },
                     enabled = enabled,
                     shape = SegmentedButtonDefaults.itemShape(i, options.size),
                 ) { FitText(name(o), MaterialTheme.typography.labelLarge) }
@@ -159,9 +162,13 @@ private fun <T> Choice(label: String, options: List<T>, selected: T, name: (T) -
 
 @Composable
 private fun Toggle(title: String, subtitle: String, checked: Boolean, onChange: (Boolean) -> Unit) {
+    val haptics = LocalHapticFeedback.current
     // the whole row is the switch, so talkback stops on it once
     Row(
-        Modifier.fillMaxWidth().toggleable(checked, role = Role.Switch, onValueChange = onChange).padding(horizontal = 20.dp, vertical = 14.dp),
+        Modifier.fillMaxWidth().toggleable(checked, role = Role.Switch) {
+            haptics.performHapticFeedback(if (it) HapticFeedbackType.ToggleOn else HapticFeedbackType.ToggleOff)
+            onChange(it)
+        }.padding(horizontal = 20.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {
