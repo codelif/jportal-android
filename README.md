@@ -35,6 +35,12 @@ The portal client is [ktjiit](https://github.com/codelif/ktjiit), pulled in as a
 
 There are two flavors: `github` (checks GitHub for updates) and `play` (doesn't).
 
+### Tests and benchmarks
+
+- `./gradlew :app:testGithubDebugUnitTest` runs the unit tests and checks every main screen against the pictures in `app/src/test/screenshots` (light, dark and twice the font size). After a deliberate UI change, record new ones with `./gradlew :app:recordRoborazziGithubDebug` and look at the diff.
+- `./gradlew :app:checkGithubReleaseApkSize` fails when the release APK outgrows its budget. It also runs after every release build.
+- The `baselineprofile` module holds the startup and frame time benchmarks and the baseline profile generator. They drive a made-up student, so no sign in is needed. Point `ANDROID_SERIAL` at an emulator or a spare phone, then run `./gradlew :app:generateGithubReleaseBaselineProfile` for a new profile, or `./gradlew :baselineprofile:connectedGithubBenchmarkReleaseAndroidTest` for numbers.
+
 ## Privacy
 
 Your portal session is sealed with an Android Keystore key and never leaves the phone except to talk to the portal. No analytics and no crash reporting. The "copy debug report" button under About is the only diagnostics, and it strips tokens, names and ids.
