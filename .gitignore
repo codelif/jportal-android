@@ -10,3 +10,4 @@ captures/
 *.har
 local-fixtures/
 release-notes.md
+__pycache__/

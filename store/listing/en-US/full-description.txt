@@ -1,0 +1,31 @@
+The JIIT webportal, as an app. Sign in once with your JIIT Google account and everything is a tap away, even offline.
+
+JPortal is unofficial. It isn't made, affiliated with or endorsed by JIIT.
+
+ATTENDANCE
+• A ring for every subject, counted class by class
+• How many classes you can skip, or how many you need to attend to get back to your target
+• A calendar of every class, with the days you missed struck through
+• Your lecture, tutorial and practical attendance separately
+
+ACADEMICS
+• SGPA and CGPA for every semester, with a what-if for the semesters to come
+• Grade cards
+• Marks for every exam event
+• Your exam schedule with dates, rooms and seats, and a countdown to the next paper
+
+SUBJECTS
+• Every subject you've taken, searchable, with faculty and credits
+• Your subject choices and MOOC requests
+
+ME
+• Profile, fees, hostel and bank details (hidden until you tap)
+• Feedback forms: give one rating per teacher, review it, send
+
+AND
+• Works offline: everything is saved on your phone, and every screen says how old its data is
+• Material You colours from your wallpaper, or the classic JPortal blue, with a pure black dark mode
+• No ads, no analytics, no tracking, and nothing about you ever reaches the developer
+
+JPortal is open source (GPL-3.0): github.com/codelif/jportal-android
+It's a remake of the original JPortal web app by Yash Malik.

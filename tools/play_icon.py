@@ -33,5 +33,6 @@ def svg_list(items):
     holder.extend(items)
     return svg(holder)
 
-doc = f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108" width="512" height="512"><rect width="108" height="108" fill="{bg}"/>{svg(root)}</svg>'
-subprocess.run(['rsvg-convert', '-w', '512', '-h', '512', '-o', sys.argv[1]], input=doc.encode(), check=True)
+if __name__ == '__main__':
+    doc = f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108" width="512" height="512"><rect width="108" height="108" fill="{bg}"/>{svg(root)}</svg>'
+    subprocess.run(['rsvg-convert', '-w', '512', '-h', '512', '-o', sys.argv[1]], input=doc.encode(), check=True)
