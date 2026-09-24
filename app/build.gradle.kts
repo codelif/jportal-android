@@ -93,7 +93,36 @@ android {
     }
 }
 
+/** fails the build when a release apk outgrows its budget */
+abstract class ApkSizeCheck : DefaultTask() {
+    @get:InputFiles
+    abstract val apks: DirectoryProperty
+
+    @get:Input
+    abstract val budget: Property<Long>
+
+    @TaskAction
+    fun check() {
+        apks.get().asFile.walk().filter { it.extension == "apk" }.forEach { apk ->
+            val size = apk.length()
+            logger.lifecycle("${apk.name}: ${size / 1024} KiB of a ${budget.get() / 1024} KiB budget")
+            check(size <= budget.get()) { "${apk.name} is ${size / 1024} KiB, over the ${budget.get() / 1024} KiB budget" }
+        }
+    }
+}
+
+// 1.93 MB in september 2026. growing past this should be a decision, not an accident
+val apkBudget = 2_250_000L
+
 androidComponents {
+    onVariants(selector().withBuildType("release")) { v ->
+        val name = v.name.replaceFirstChar { it.uppercase() }
+        val check = tasks.register<ApkSizeCheck>("check${name}ApkSize") {
+            apks.set(v.artifacts.get(com.android.build.api.artifact.SingleArtifact.APK))
+            budget.set(apkBudget)
+        }
+        tasks.matching { it.name == "assemble$name" }.configureEach { finalizedBy(check) }
+    }
     onVariants { v ->
         // benchmarks and profile runs can't script a google sign in, they get the made up student instead
         if (v.buildType == "benchmarkRelease" || v.buildType == "nonMinifiedRelease") {
