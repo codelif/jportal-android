@@ -70,7 +70,7 @@ import kotlin.math.roundToInt
 
 /**
  * a subject row. the class list is what makes the numbers exact, the portal's
- * own percentage is only a fallback for when that list can't be had.
+ * own percentage fills in while it's on its way and when it can't be had.
  */
 class SubjectLine(val subject: SubjectAttendance, daily: Resource<DailyAttendance>) {
     val tally: Tally? = daily.data?.let { AttendanceMath.tally(it.classes) }?.takeIf { it.total > 0 }
@@ -78,7 +78,7 @@ class SubjectLine(val subject: SubjectAttendance, daily: Resource<DailyAttendanc
     /** class list still on its way, nothing final to show yet */
     val counting: Boolean = daily.data == null && daily.error == null
 
-    val started: Boolean = tally != null || (!counting && (subject.percent ?: 0.0) > 0.0)
+    val started: Boolean = tally != null || (subject.percent ?: 0.0) > 0.0
     val percent: Float = tally?.percent?.toFloat() ?: (subject.percent ?: 0.0).toFloat()
 
     /** the last few classes, oldest first, true for present */
@@ -238,9 +238,10 @@ private fun SubjectCard(line: SubjectLine, target: Int, modifier: Modifier = Mod
     ) {
         Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             val started = line.started
-            val ring = if (line.counting) Modifier.pulsing() else Modifier
+            // the portal's number reads fine while the count runs, only a ring with nothing to show breathes
+            val ring = if (line.counting && !started) Modifier.pulsing() else Modifier
             AttendanceRing(if (started) line.percent else 0f, target, ring.shared("ring-${s.subjectId}"), size = 60.dp, stroke = 6.dp) {
-                if (!line.counting) {
+                if (started || !line.counting) {
                     FitText(
                         if (started) "${line.percent.roundToInt()}" else "–",
                         MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
