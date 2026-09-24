@@ -23,6 +23,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -65,7 +66,7 @@ import `in`.codelif.jportal.ui.nav.Route
 val LocalNavigator = compositionLocalOf<Navigator> { error("no navigator") }
 
 /** room the floating bottom bar takes, lists pad by this so nothing hides under it */
-val LocalBottomInset = compositionLocalOf { 0.dp }
+val LocalBottomInset = staticCompositionLocalOf { 0.dp }
 
 @Composable
 fun AppRoot() {
@@ -87,7 +88,8 @@ private fun SignedIn() {
     val barHeight: Dp = 80.dp
     val pager = rememberPagerState(initialPage = Route.tabs.indexOf(nav.tab)) { Route.tabs.size }
 
-    CompositionLocalProvider(LocalNavigator provides nav, LocalBottomInset provides if (onTab) barHeight else 0.dp) {
+    // fixed on purpose: only the tabs read it, and flipping it on push relaid all four mid transition
+    CompositionLocalProvider(LocalNavigator provides nav, LocalBottomInset provides barHeight) {
         // tags double as resource ids so the benchmark journeys can find the tabs
         Box(Modifier.fillMaxSize().semantics { testTagsAsResourceId = true }) {
             // under everything: it only needs to exist, on top it would eat every tap until google answers
