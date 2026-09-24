@@ -130,6 +130,7 @@ fun ago(ms: Long?, now: Long = System.currentTimeMillis()): String {
 fun describe(e: Throwable?): String = when (e) {
     null -> ""
     is SignInRequired -> "Sign in again to refresh"
+    is PortalException.Untrusted -> "The portal is having trouble on its end"
     is PortalException.Network -> "You're offline"
     is PortalException.ServerUnavailable -> "The portal is down right now"
     is PortalException.PortalError -> e.errors.firstOrNull()?.lowercase()?.replaceFirstChar { it.uppercase() } ?: "The portal said no"
@@ -149,7 +150,15 @@ fun StaleNotice(res: Resource<*>, onRetry: () -> Unit, modifier: Modifier = Modi
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
         ) {
             Row(Modifier.padding(start = 16.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                Ic(if (res.error is PortalException.Network) R.drawable.ic_wifi_off else R.drawable.ic_history, null, Modifier.size(18.dp))
+                Ic(
+                    when (res.error) {
+                        is PortalException.Network -> R.drawable.ic_wifi_off
+                        is PortalException.Untrusted -> R.drawable.ic_warning
+                        else -> R.drawable.ic_history
+                    },
+                    null,
+                    Modifier.size(18.dp),
+                )
                 Spacer(Modifier.width(12.dp))
                 Text(
                     "${describe(res.error)} · updated ${ago(res.fetchedAt)}",
