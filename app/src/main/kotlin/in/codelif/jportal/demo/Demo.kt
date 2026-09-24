@@ -13,6 +13,8 @@ import `in`.codelif.ktjiit.model.*
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.builtins.nullable
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -181,7 +183,24 @@ object Demo {
             FeeHead(6, type = "Regular", fee = 190000.0, paid = 190000.0),
             FeeHead(5, type = "Regular", fee = 190000.0, paid = 180000.0, waived = 10000.0),
         )))
-        put("feedback", ListSerializer(FeedbackEvent.serializer()), emptyList())
+        put("feedback", ListSerializer(FeedbackEvent.serializer()), listOf(FEEDBACK))
+    }
+
+    private val FEEDBACK = FeedbackEvent("FB1", "Odd semester 2026 feedback", "FB2026ODD")
+
+    /** the feedback grid for the demo's open window: every teacher of every class this semester */
+    fun feedbackRows(): List<FeedbackRow> = current.flatMap { s ->
+        s.parts.map { c ->
+            FeedbackRow(buildJsonObject {
+                put("employeeid", "EMP-${s.teachers[c]}")
+                put("employeename", s.teachers[c].orEmpty())
+                put("subjectid", s.id)
+                put("subjectcode", s.code)
+                put("subjectdescription", s.name)
+                put("subjectcomponentid", "${s.id}$c")
+                put("subjectcomponentcode", c.toString())
+            })
+        }
     }
 
     private val PEOPLE = listOf("DR. MEERA IYER", "ARJUN KHANNA", "DR. SNEHA GUPTA", "VIKRAM SETHI", "DR. POOJA DAS", "NIKHIL JAIN")

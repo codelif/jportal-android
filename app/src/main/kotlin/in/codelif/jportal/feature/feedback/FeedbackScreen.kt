@@ -53,7 +53,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import `in`.codelif.jportal.LocalGraph
 import `in`.codelif.jportal.R
+import `in`.codelif.jportal.demo.Demo
 import `in`.codelif.jportal.feature.academics.COMPONENT
+import `in`.codelif.jportal.feature.attendance.nameCase
 import `in`.codelif.jportal.feature.attendance.titleCase
 import `in`.codelif.jportal.ui.LocalNavigator
 import `in`.codelif.jportal.ui.components.CenteredLoading
@@ -71,6 +73,7 @@ import `in`.codelif.ktjiit.model.FeedbackRow
 import `in`.codelif.ktjiit.model.Rating
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 val Rating.label: String
@@ -148,11 +151,15 @@ fun FeedbackScreen() {
     LaunchedEffect(list, attempt) {
         if (list.isNullOrEmpty()) return@LaunchedEffect
         grid = null
-        grid = runCatching { graph.sessions.call { p -> list.flatMap { e -> p.feedbackGrid(e).map { Form(e, it) } } } }
+        grid = runCatching {
+            if (graph.demo) list.flatMap { e -> Demo.feedbackRows().map { Form(e, it) } }
+            else graph.sessions.call { p -> list.flatMap { e -> p.feedbackGrid(e).map { Form(e, it) } } }
+        }
     }
     val session = grid?.getOrNull()?.let { forms ->
         remember(forms) {
-            FeedbackSession(forms, graph.scope) { f, r -> graph.sessions.call { it.submitFeedback(f.event, f.row, r) } }
+            // the demo goes through the motions, nothing leaves the phone
+            FeedbackSession(forms, graph.scope) { f, r -> if (graph.demo) delay(400) else graph.sessions.call { it.submitFeedback(f.event, f.row, r) } }
         }
     }
     // refetching the grid would wipe picked ratings, so a pull only rechecks the events
@@ -256,7 +263,7 @@ private fun FormRow(s: FeedbackSession, f: Form) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {
-            Text(f.row.facultyName.titleCase(), style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(f.row.facultyName.nameCase(), style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(
                 listOfNotNull(f.row.subjectName.titleCase().ifBlank { null }, COMPONENT[f.row.component] ?: f.row.component.ifBlank { null }).joinToString(" · "),
                 style = MaterialTheme.typography.bodySmall,
@@ -358,7 +365,7 @@ private fun Review(s: FeedbackSession, onDismiss: () -> Unit, onSubmit: () -> Un
                     Text("${forms.size}", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
                 }
                 Text(
-                    forms.joinToString(", ") { it.row.facultyName.titleCase() + (COMPONENT[it.row.component]?.let { c -> " ($c)" } ?: "") },
+                    forms.joinToString(", ") { it.row.facultyName.nameCase() + (COMPONENT[it.row.component]?.let { c -> " ($c)" } ?: "") },
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
