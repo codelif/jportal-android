@@ -4,12 +4,18 @@ import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.material3.Surface
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboard
@@ -22,9 +28,11 @@ import androidx.compose.ui.unit.dp
 import `in`.codelif.jportal.BuildConfig
 import `in`.codelif.jportal.LocalGraph
 import `in`.codelif.jportal.R
+import `in`.codelif.jportal.data.Release
 import `in`.codelif.jportal.debug.DebugLog
 import `in`.codelif.jportal.ui.LocalNavigator
 import `in`.codelif.jportal.ui.components.Group
+import `in`.codelif.jportal.ui.components.Ic
 import `in`.codelif.jportal.ui.components.ScreenScaffold
 import `in`.codelif.jportal.ui.components.SectionHeader
 
@@ -38,6 +46,7 @@ fun AboutScreen() {
     val graph = LocalGraph.current
     val clip = LocalClipboard.current
     val scope = rememberCoroutineScope()
+    val update by graph.updates.available.collectAsState()
     ScreenScaffold("About", onBack = { nav.pop() }) {
         item("head") {
             Column(Modifier.fillMaxWidth().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -52,6 +61,7 @@ fun AboutScreen() {
                 )
             }
         }
+        update?.let { r -> item("update") { UpdateCard(r) { open(context, r.url) } } }
         item("people-h") { SectionHeader("Made possible by") }
         item("people") {
             Group {
@@ -82,6 +92,27 @@ fun AboutScreen() {
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun UpdateCard(r: Release, onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        shape = MaterialTheme.shapes.extraLarge,
+        color = MaterialTheme.colorScheme.primaryContainer,
+        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+    ) {
+        Row(Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
+            Ic(R.drawable.ic_system_update, null, Modifier.size(28.dp))
+            Spacer(Modifier.width(16.dp))
+            Column(Modifier.weight(1f)) {
+                Text("Update to v${r.version}", style = MaterialTheme.typography.titleMedium)
+                Text("You have v${BuildConfig.VERSION_NAME}", style = MaterialTheme.typography.bodyMedium)
+            }
+            Ic(R.drawable.ic_open_in_new, null, Modifier.size(20.dp))
         }
     }
 }

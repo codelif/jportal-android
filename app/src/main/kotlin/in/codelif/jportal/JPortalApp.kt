@@ -6,6 +6,7 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import `in`.codelif.jportal.data.Cache
 import `in`.codelif.jportal.data.Prefs
 import `in`.codelif.jportal.data.Repository
+import `in`.codelif.jportal.data.Updates
 import `in`.codelif.jportal.session.SessionManager
 import `in`.codelif.jportal.session.SessionStore
 import `in`.codelif.ktjiit.http.Transport
@@ -20,6 +21,7 @@ class AppGraph(context: Context) {
     val transport = Transport()
     val sessions = SessionManager(SessionStore(context), transport)
     val repo = Repository(Cache(context), sessions, scope)
+    val updates = Updates(context, scope)
 
     fun signOut() {
         sessions.signOut()

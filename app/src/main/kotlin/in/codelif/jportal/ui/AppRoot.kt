@@ -64,6 +64,7 @@ val LocalBottomInset = compositionLocalOf { 0.dp }
 fun AppRoot() {
     val graph = LocalGraph.current
     val auth by graph.sessions.state.collectAsState()
+    LaunchedEffect(Unit) { graph.updates.check() }
     AnimatedContent(auth is AuthState.SignedIn, transitionSpec = { fadeIn() togetherWith fadeOut() }, label = "auth") { signedIn ->
         if (signedIn) SignedIn() else SignInScreen()
     }

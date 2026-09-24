@@ -114,7 +114,15 @@ fun MeScreen() {
         item("app") {
             Group {
                 row { Entry(R.drawable.ic_settings, "Settings", "Theme, goal, icon") { nav.push(Route.Settings) } }
-                row { Entry(R.drawable.ic_info, "About JPortal", "Credits, licenses, debug report") { nav.push(Route.About) } }
+                row {
+                    val update by LocalGraph.current.updates.available.collectAsState()
+                    Entry(
+                        if (update != null) R.drawable.ic_system_update else R.drawable.ic_info,
+                        "About JPortal",
+                        if (update != null) "Update available" else "Credits, licenses, debug report",
+                        alert = update != null,
+                    ) { nav.push(Route.About) }
+                }
             }
         }
         item("energy") { BigEnergy(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 20.dp)) }
