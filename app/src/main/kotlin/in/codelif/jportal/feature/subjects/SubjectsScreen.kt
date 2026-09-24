@@ -51,6 +51,8 @@ import `in`.codelif.jportal.feature.academics.SemesterInfo
 import `in`.codelif.jportal.feature.academics.SubjectInfo
 import `in`.codelif.jportal.feature.academics.rememberAcademics
 import `in`.codelif.jportal.feature.attendance.titleCase
+import `in`.codelif.jportal.feature.me.Entry
+import `in`.codelif.jportal.feature.registration.rememberPicked
 import `in`.codelif.jportal.feature.subject.fmt
 import `in`.codelif.jportal.ui.LocalBottomInset
 import `in`.codelif.jportal.ui.LocalNavigator
@@ -65,6 +67,7 @@ import `in`.codelif.jportal.ui.components.SectionHeader
 import `in`.codelif.jportal.ui.components.prettySemester
 import `in`.codelif.jportal.ui.nav.Route
 import `in`.codelif.jportal.ui.theme.LocalExtraColors
+import `in`.codelif.ktjiit.model.MoocStatus
 import kotlinx.coroutines.flow.drop
 
 enum class SubjectFilter(val label: String) { Current("This semester"), Labs("Labs"), Graded("Graded") }
@@ -159,6 +162,11 @@ private fun LazyListScope.subjects(data: Academics, query: String, f: Set<Subjec
             )
         }
     }
+    // registration is about this semester's paperwork, not a subject, so it steps aside while you search
+    if (q.isEmpty() && f.isEmpty()) {
+        item("reg-h") { SectionHeader("Registration", Modifier.animateItem()) }
+        item("reg") { RegistrationRows(Modifier.animateItem()) }
+    }
     groups.forEach { (s, list) ->
         item("h-${s.code}") {
             SectionHeader(
@@ -171,6 +179,34 @@ private fun LazyListScope.subjects(data: Academics, query: String, f: Set<Subjec
             val nav = LocalNavigator.current
             Group(Modifier.animateItem().animateContentSize()) {
                 list.forEach { sub -> row { SubjectRow(sub, q) { nav.push(Route.Subject(sub.semesterCode, sub.code)) } } }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RegistrationRows(modifier: Modifier) {
+    val repo = LocalGraph.current.repo
+    val nav = LocalNavigator.current
+    val choices = rememberPicked(repo.choiceSemesters, emptyList()) { repo.choices(it) }
+    val mooc = rememberPicked(repo.moocSemesters, MoocStatus()) { repo.mooc(it) }
+    val electives = choices.res.data?.filter { it.isElective }?.map { it.basket }?.distinct()?.size
+    val moocLine = mooc.res.data?.let { m ->
+        val approved = m.requests.count { it.isApproved }
+        val waiting = m.requests.size - approved
+        listOfNotNull("$approved approved".takeIf { approved > 0 }, "$waiting in review".takeIf { waiting > 0 }, "${m.rejected.size} rejected".takeIf { m.rejected.isNotEmpty() })
+            .joinToString(" · ").ifEmpty { "No requests" }
+    }
+    Group(modifier) {
+        row {
+            Entry(
+                R.drawable.ic_checklist, "Subject choices",
+                choices.semester?.let { s -> listOfNotNull(prettySemester(s.code), electives?.takeIf { it > 0 }?.let { "$it ${if (it == 1) "elective" else "electives"}" }).joinToString(" · ") },
+            ) { nav.push(Route.Choices) }
+        }
+        row {
+            Entry(R.drawable.ic_cast_for_education, "MOOC status", mooc.semester?.let { s -> listOfNotNull(prettySemester(s.code), moocLine).joinToString(" · ") }) {
+                nav.push(Route.Mooc)
             }
         }
     }

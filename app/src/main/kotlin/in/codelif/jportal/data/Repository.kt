@@ -84,6 +84,13 @@ class Repository(
     val fees get() = store("fees", FeeSummary.serializer(), 6 * 60) { it.fees() }
     val feedback get() = store("feedback", ListSerializer(FeedbackEvent.serializer()), 60) { it.feedbackEvents() }
 
+    // registration, read only
+
+    val choiceSemesters get() = store("choice_sems", ListSerializer(Semester.serializer()), 6 * 60) { it.choiceSemesters() }
+    fun choices(sem: Semester) = store("choices:${sem.id}", ListSerializer(SubjectChoice.serializer()), 6 * 60) { it.subjectChoices(sem) }
+    val moocSemesters get() = store("mooc_sems", ListSerializer(Semester.serializer()), 6 * 60) { it.moocSemesters() }
+    fun mooc(sem: Semester) = store("mooc:${sem.id}", MoocStatus.serializer(), 6 * 60) { it.moocStatus(sem) }
+
     fun wipe() {
         stores.clear()
         cache.clear()

@@ -20,6 +20,8 @@ sealed interface Route {
     }
     data class GradeCard(val code: String) : Route { override val key = "gradecard/$code" }
     data class Marks(val code: String) : Route { override val key = "marks/$code" }
+    data object Choices : Route { override val key = "choices" }
+    data object Mooc : Route { override val key = "mooc" }
     data object Profile : Route { override val key = "profile" }
     data object Fees : Route { override val key = "fees" }
     data object Bank : Route { override val key = "bank" }

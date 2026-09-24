@@ -47,6 +47,8 @@ import `in`.codelif.jportal.feature.me.FeesScreen
 import `in`.codelif.jportal.feature.me.HostelScreen
 import `in`.codelif.jportal.feature.me.MeScreen
 import `in`.codelif.jportal.feature.me.ProfileScreen
+import `in`.codelif.jportal.feature.registration.ChoicesScreen
+import `in`.codelif.jportal.feature.registration.MoocScreen
 import `in`.codelif.jportal.feature.settings.SettingsScreen
 import `in`.codelif.jportal.feature.signin.ReauthHost
 import `in`.codelif.jportal.feature.signin.SignInScreen
@@ -113,6 +115,8 @@ private fun Screen(route: Route) = when (route) {
     is Route.Subject -> SubjectScreen(route)
     is Route.GradeCard -> GradeCardScreen(route)
     is Route.Marks -> MarksScreen(route)
+    Route.Choices -> ChoicesScreen()
+    Route.Mooc -> MoocScreen()
     Route.Profile -> ProfileScreen()
     Route.Fees -> FeesScreen()
     Route.Bank -> BankScreen()
