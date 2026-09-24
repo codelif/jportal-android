@@ -43,7 +43,7 @@ There are two flavors: `github` (checks GitHub for updates) and `play` (doesn't)
 
 ### Releasing
 
-`tools/release.sh 0.2.0` checks the tree, makes a signed `v0.2.0` tag (notes from `release-notes.md` if it's there) and stops. Pushing the tag starts the release workflow, which refuses any tag, commit or pinned ktjiit commit not signed by the key in `.github/tag-signer.asc`, then builds, signs and publishes the APK with its checksum. A tag with a dash, like `v0.2.0-rc1`, becomes a prerelease that the app's update check skips.
+`tools/release.sh 0.2.0` checks the tree, makes a signed `v0.2.0` tag (notes from `release-notes.md`, or your editor when that is missing or empty) and stops. Pushing the tag starts the release workflow, which refuses any tag, commit or pinned ktjiit commit not signed by the key in `.github/tag-signer.asc`, then builds, signs and publishes the APK with its checksum. A tag with a dash, like `v0.2.0-rc1`, becomes a prerelease that the app's update check skips.
 
 ## Privacy
 

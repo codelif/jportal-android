@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # makes the signed tag for a release and stops, pushing it is what starts the build.
-# usage: tools/release.sh 0.2.0, notes come from release-notes.md when it's there
+# usage: tools/release.sh 0.2.0, notes come from release-notes.md or else $EDITOR
 set -euo pipefail
 die() { echo "release: $*" >&2; exit 1; }
 
@@ -26,9 +26,26 @@ git -C ktjiit verify-commit HEAD 2> /dev/null || die "the pinned ktjiit commit i
 git -C ktjiit fetch -q https://github.com/codelif/ktjiit.git main
 git -C ktjiit merge-base --is-ancestor HEAD FETCH_HEAD || die "the pinned ktjiit commit isn't on github yet, push ktjiit first"
 
+SCISSORS='# ------------------------ >8 ------------------------'
 notes=
 [[ -f release-notes.md ]] && notes=$(< release-notes.md)
-git tag -s "$tag" -m "$tag" ${notes:+-m "$notes"}
+if [[ -z ${notes//[[:space:]]/} ]]; then
+    draft=$(mktemp --suffix=.md)
+    trap 'rm -f "$draft"' EXIT
+    # git's scissors: everything from that line down is dropped, so markdown headings survive
+    {
+        echo
+        echo "$SCISSORS"
+        echo "notes for $tag go above the line, in markdown. leave it empty to call off the release"
+        echo "commits since ${last:-the start}:"
+        git log --format='- %s' ${last:+"$last"..}HEAD
+    } > "$draft"
+    ${VISUAL:-${EDITOR:-vi}} "$draft"
+    notes=$(sed "/^$SCISSORS\$/,\$d" "$draft" | sed '/./,$!d')
+    [[ -n ${notes//[[:space:]]/} ]] || die "no notes, no release"
+fi
+# git strips # lines from tag messages by default, which would eat the headings
+git tag -s --cleanup=whitespace "$tag" -m "$tag" -m "$notes"
 git verify-tag "$tag" 2> /dev/null || die "the tag came out unsigned"
 
 echo "tagged $tag${last:+ (last was $last)}, ship it with: git push origin main $tag"
