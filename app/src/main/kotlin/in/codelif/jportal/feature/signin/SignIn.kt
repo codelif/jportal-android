@@ -22,6 +22,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -95,6 +96,8 @@ private fun rememberSignalHandler(onError: (String) -> Unit, onBusy: (Boolean) -
 @Composable
 private fun PopupHost(popup: WebView?, onDismiss: () -> Unit) {
     if (popup == null) return
+    // themed until google paints, a white webview flashes in dark mode
+    popup.setBackgroundColor(MaterialTheme.colorScheme.surface.toArgb())
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
         Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.surface) {
             Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().imePadding()) {

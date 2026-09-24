@@ -7,6 +7,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -73,7 +74,13 @@ fun AppRoot() {
     val graph = LocalGraph.current
     val auth by graph.sessions.state.collectAsState()
     LaunchedEffect(Unit) { if (!graph.demo) graph.updates.check() }
-    AnimatedContent(auth is AuthState.SignedIn, transitionSpec = { fadeIn() togetherWith fadeOut() }, label = "auth") { signedIn ->
+    // opaque under every fade, so a page change never shows what's behind the app
+    AnimatedContent(
+        auth is AuthState.SignedIn,
+        Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface),
+        transitionSpec = { fadeIn() togetherWith fadeOut() },
+        label = "auth",
+    ) { signedIn ->
         if (signedIn) SignedIn() else SignInScreen()
     }
 }

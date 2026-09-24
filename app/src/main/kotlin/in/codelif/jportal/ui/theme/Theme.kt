@@ -17,6 +17,8 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.toArgb
+import android.graphics.drawable.ColorDrawable
 import androidx.compose.ui.platform.LocalContext
 import `in`.codelif.jportal.data.Palette
 import `in`.codelif.jportal.data.ThemeMode
@@ -109,15 +111,18 @@ fun JPortalTheme(
         }
         if (dark && amoled) base.amoled() else base
     }
-    // system bar icons follow the app's theme, not the phone's, or a forced dark theme gets dark icons on dark
+    // system bars and the window follow the app's theme, not the phone's. the window shows through
+    // every crossfade, left on the xml colour a forced dark theme flashes white between pages
     val activity = LocalActivity.current
     val view = LocalView.current
+    val window = scheme.surface.toArgb()
     SideEffect {
         activity?.window?.let { w ->
             WindowCompat.getInsetsController(w, view).apply {
                 isAppearanceLightStatusBars = !dark
                 isAppearanceLightNavigationBars = !dark
             }
+            w.setBackgroundDrawable(ColorDrawable(window))
         }
     }
     val extra = remember(scheme, dark, dynamic) { extras(scheme, dark, exact = !dynamic) }

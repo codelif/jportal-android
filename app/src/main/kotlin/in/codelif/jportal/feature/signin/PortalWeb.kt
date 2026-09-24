@@ -108,7 +108,6 @@ object PortalWeb {
         val chrome = object : WebChromeClient() {
             override fun onCreateWindow(view: WebView, isDialog: Boolean, isUserGesture: Boolean, resultMsg: Message): Boolean {
                 val popup = configure(WebView(view.context)).apply {
-                    setBackgroundColor(Color.WHITE)
                     webViewClient = WebViewClient()
                     webChromeClient = object : WebChromeClient() {
                         override fun onCloseWindow(window: WebView) {
