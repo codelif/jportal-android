@@ -8,7 +8,7 @@ import org.junit.runner.RunWith
 
 /**
  * run with ANDROID_SERIAL on a rooted emulator or a phone:
- * ./gradlew :app:generateGithubReleaseBaselineProfile
+ * ./gradlew :app:generateBaselineProfile
  */
 @RunWith(AndroidJUnit4::class)
 class BaselineProfileGenerator {
@@ -28,6 +28,7 @@ class BaselineProfileGenerator {
         subject()
         academics()
         subjects()
+        registration()
         me()
         swipeAround()
     }

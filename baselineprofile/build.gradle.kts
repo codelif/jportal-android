@@ -36,4 +36,6 @@ dependencies {
     implementation(libs.androidx.junit)
     implementation(libs.uiautomator)
     implementation(libs.benchmark.macro)
+    implementation(libs.tracing.perfetto)
+    implementation(libs.tracing.perfetto.binary)
 }

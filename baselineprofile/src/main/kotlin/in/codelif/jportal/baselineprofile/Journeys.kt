@@ -4,8 +4,8 @@ import androidx.benchmark.macro.MacrobenchmarkScope
 import androidx.test.uiautomator.By
 import androidx.test.uiautomator.Until
 
-// release builds of these variants carry the demo student, see app/build.gradle.kts
-const val PACKAGE = "in.codelif.jportal.android"
+// benchmark builds carry the demo student under their own package, see app/build.gradle.kts
+const val PACKAGE = "in.codelif.jportal.android.bench"
 
 private const val WAIT = 5_000L
 
@@ -59,9 +59,19 @@ fun MacrobenchmarkScope.subject() {
     device.waitForIdle()
 }
 
+/** opens the row labelled [text], scrolls it and comes back */
+private fun MacrobenchmarkScope.visit(text: String, until: String? = null) {
+    tapText(text)
+    until?.let { device.wait(Until.hasObject(By.text(it)), WAIT) }
+    flingPage()
+    device.pressBack()
+    device.waitForIdle()
+}
+
 fun MacrobenchmarkScope.academics() {
     tap("tab-academics")
     flingPage()
+    visit("Semester 4", "Grade card")
     tapText("Marks")
     flingPage()
     tapText("Exams")
@@ -84,11 +94,16 @@ fun MacrobenchmarkScope.subjects() {
 
 fun MacrobenchmarkScope.me() {
     tap("tab-me")
-    tapText("Yash Malik")
-    device.wait(Until.hasObject(By.text("Contact")), WAIT)
-    flingPage()
-    device.pressBack()
-    device.waitForIdle()
+    visit("Yash Malik", "Contact")
+    visit("Fees")
+    visit("Settings", "Look")
+}
+
+/** the registration pages hang off the top of the subjects tab */
+fun MacrobenchmarkScope.registration() {
+    tap("tab-subjects")
+    visit("Subject choices")
+    visit("MOOC status")
 }
 
 /** tab to tab by swiping, the way people actually move around */

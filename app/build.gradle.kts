@@ -127,6 +127,8 @@ androidComponents {
         // benchmarks and profile runs can't script a google sign in, they get the made up student instead
         if (v.buildType == "benchmarkRelease" || v.buildType == "nonMinifiedRelease") {
             v.buildConfigFields?.put("DEMO", com.android.build.api.variant.BuildConfigField("boolean", "true", null))
+            // its own package, so a benchmark on a daily phone never lands on the signed in app
+            (v as com.android.build.api.variant.ApplicationVariant).applicationId.set("in.codelif.jportal.android.bench")
         }
     }
 }
@@ -184,5 +186,9 @@ dependencies {
     baselineProfile(project(":baselineprofile"))
 
     debugImplementation(libs.compose.ui.tooling)
+    // composable names in benchmark traces, never in a shipped build
+    configurations.matching { it.name == "benchmarkReleaseImplementation" }.configureEach {
+        dependencies.add(project.dependencies.create(libs.compose.runtime.tracing.get()))
+    }
     implementation(libs.compose.ui.tooling.preview)
 }

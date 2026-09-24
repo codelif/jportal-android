@@ -39,7 +39,7 @@ There are two flavors: `github` (checks GitHub for updates) and `play` (doesn't)
 
 - `./gradlew :app:testGithubDebugUnitTest` runs the unit tests and checks every main screen against the pictures in `app/src/test/screenshots` (light, dark and twice the font size). After a deliberate UI change, record new ones with `./gradlew :app:recordRoborazziGithubDebug` and look at the diff.
 - `./gradlew :app:checkGithubReleaseApkSize` fails when the release APK outgrows its budget. It also runs after every release build.
-- The `baselineprofile` module holds the startup and frame time benchmarks and the baseline profile generator. They drive a made-up student, so no sign in is needed. Point `ANDROID_SERIAL` at an emulator or a spare phone, then run `./gradlew :app:generateGithubReleaseBaselineProfile` for a new profile, or `./gradlew :baselineprofile:connectedGithubBenchmarkReleaseAndroidTest` for numbers.
+- The `baselineprofile` module holds the startup and frame time benchmarks and the baseline profile generator. They drive a made-up student under their own package (`in.codelif.jportal.android.bench`), so no sign in is needed and a phone's real install is left alone. Point `ANDROID_SERIAL` at an emulator or a phone, then run `./gradlew :app:generateBaselineProfile` for a new profile, or `./gradlew :baselineprofile:connectedGithubBenchmarkReleaseAndroidTest` for numbers. Add `-Pandroid.testInstrumentationRunnerArguments.compilation=none` to see a fresh sideload before Android compiles it, and `-Pandroid.testInstrumentationRunnerArguments.androidx.benchmark.fullTracing.enable=true` for composable names in the traces.
 
 ## Privacy
 
