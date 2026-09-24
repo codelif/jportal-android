@@ -1,0 +1,68 @@
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      # nothing gets built unless the tag, the commit and the pinned ktjiit all carry the key in .github/tag-signer.asc
+      - name: verify signatures
+        env:
+          SIGNER: E67627614BDDA9C01076F211F558B2A2512E1295
+        run: |
+          # checkout can leave a lightweight copy of the tag, fetch the real object
+          git fetch --force origin "refs/tags/$GITHUB_REF_NAME:refs/tags/$GITHUB_REF_NAME"
+          gpg --batch --import .github/tag-signer.asc
+          echo "$SIGNER:6:" | gpg --batch --import-ownertrust
+          signed() { "$@" --raw 2>&1 | grep -q "VALIDSIG .* $SIGNER$"; }
+          signed git verify-tag "$GITHUB_REF_NAME" || { echo "::error::$GITHUB_REF_NAME is not signed by $SIGNER"; exit 1; }
+          signed git verify-commit HEAD || { echo "::error::the tagged commit is not signed by $SIGNER"; exit 1; }
+          signed git -C ktjiit verify-commit HEAD || { echo "::error::the pinned ktjiit commit is not signed by $SIGNER"; exit 1; }
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-read-only: true
+      - run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-37.0" "build-tools;37.0.0" > /dev/null
+
+      - name: build
+        env:
+          JPORTAL_VERSION: ${{ github.ref_name }}
+          JPORTAL_KEYSTORE_B64: ${{ secrets.JPORTAL_KEYSTORE_B64 }}
+          JPORTAL_KEYSTORE_PASSWORD: ${{ secrets.JPORTAL_KEYSTORE_PASSWORD }}
+          JPORTAL_KEY_ALIAS: ${{ secrets.JPORTAL_KEY_ALIAS }}
+          JPORTAL_KEY_PASSWORD: ${{ secrets.JPORTAL_KEY_PASSWORD }}
+        run: |
+          # without the key the build quietly signs with a debug key, which must never ship
+          test -n "$JPORTAL_KEYSTORE_B64" || { echo "::error::no release keystore in the repo secrets"; exit 1; }
+          export JPORTAL_KEYSTORE="$RUNNER_TEMP/release.jks"
+          echo "$JPORTAL_KEYSTORE_B64" | base64 -d > "$JPORTAL_KEYSTORE"
+          ./gradlew :app:assembleGithubRelease
+          rm "$JPORTAL_KEYSTORE"
+
+      - name: publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="$GITHUB_REF_NAME"
+          apk="jportal-$tag.apk"
+          cp app/build/outputs/apk/github/release/app-github-release.apk "$apk"
+          sha256sum "$apk" > "$apk.sha256"
+          git tag -l --format='%(contents:body)' "$tag" > notes.md
+          # a dash means a prerelease, which the in-app update check skips
+          case "$tag" in *-*) pre=--prerelease ;; *) pre= ;; esac
+          gh release create "$tag" "$apk" "$apk.sha256" --title "$tag" --notes-file notes.md --verify-tag $pre

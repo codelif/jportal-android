@@ -23,7 +23,7 @@ Unofficial. Not affiliated with or endorsed by JIIT.
 
 ## Building
 
-Needs JDK 17 or newer and the Android SDK (compileSdk 37).
+Needs JDK 21 or newer and the Android SDK (compileSdk 37).
 
 ```sh
 git clone --recurse-submodules https://github.com/codelif/jportal-android
@@ -40,6 +40,10 @@ There are two flavors: `github` (checks GitHub for updates) and `play` (doesn't)
 - `./gradlew :app:testGithubDebugUnitTest` runs the unit tests and checks every main screen against the pictures in `app/src/test/screenshots` (light, dark and twice the font size). After a deliberate UI change, record new ones with `./gradlew :app:recordRoborazziGithubDebug` and look at the diff.
 - `./gradlew :app:checkGithubReleaseApkSize` fails when the release APK outgrows its budget. It also runs after every release build.
 - The `baselineprofile` module holds the startup and frame time benchmarks and the baseline profile generator. They drive a made-up student under their own package (`in.codelif.jportal.android.bench`), so no sign in is needed and a phone's real install is left alone. Point `ANDROID_SERIAL` at an emulator or a phone, then run `./gradlew :app:generateBaselineProfile` for a new profile, or `./gradlew :baselineprofile:connectedGithubBenchmarkReleaseAndroidTest` for numbers. Add `-Pandroid.testInstrumentationRunnerArguments.compilation=none` to see a fresh sideload before Android compiles it, and `-Pandroid.testInstrumentationRunnerArguments.androidx.benchmark.fullTracing.enable=true` for composable names in the traces.
+
+### Releasing
+
+`tools/release.sh 0.2.0` checks the tree, makes a signed `v0.2.0` tag (notes from `release-notes.md` if it's there) and stops. Pushing the tag starts the release workflow, which refuses any tag, commit or pinned ktjiit commit not signed by the key in `.github/tag-signer.asc`, then builds, signs and publishes the APK with its checksum. A tag with a dash, like `v0.2.0-rc1`, becomes a prerelease that the app's update check skips.
 
 ## Privacy
 
