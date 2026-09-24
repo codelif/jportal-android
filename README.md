@@ -47,7 +47,7 @@ There are two flavors: `github` (checks GitHub for updates) and `play` (doesn't)
 
 ## Privacy
 
-Your portal session is sealed with an Android Keystore key and never leaves the phone except to talk to the portal. No analytics and no crash reporting. The "copy debug report" button under About is the only diagnostics, and it strips tokens, names and ids.
+Your portal session is sealed with an Android Keystore key and never leaves the phone except to talk to the portal. No analytics and no crash reporting. The "copy debug report" button under About is the only diagnostics, and it strips tokens, names and ids. The full policy is in [PRIVACY.md](PRIVACY.md).
 
 ## Credits
 
