@@ -8,7 +8,10 @@ plugins {
 
 // release builds get their version from the signed tag, see .github/workflows/release.yml
 val tag = providers.environmentVariable("JPORTAL_VERSION").orElse("0.1.0").get().removePrefix("v")
-val (major, minor, patch) = tag.split('.', '-').take(3).map { it.toIntOrNull() ?: 0 }.let { it + List(3 - it.size) { 0 } }
+val (major, minor, patch) = tag.substringBefore('-').split('.').take(3).map { it.toIntOrNull() ?: 0 }.let { it + List(3 - it.size) { 0 } }
+// last two digits are the test round, 99 for the release itself: 0.1.0-rc.2 is 10002, 0.1.0 is 10099.
+// play never takes a code twice, so a test build has to sort below its release
+val round = if ('-' in tag) Regex("\\d+").findAll(tag.substringAfter('-')).lastOrNull()?.value?.toIntOrNull()?.coerceIn(1, 98) ?: 1 else 99
 
 android {
     namespace = "in.codelif.jportal"
@@ -19,7 +22,7 @@ android {
         applicationId = "in.codelif.jportal.android"
         minSdk = 26
         targetSdk = 36
-        versionCode = major * 10000 + minor * 100 + patch
+        versionCode = ((major * 100 + minor) * 100 + patch) * 100 + round
         versionName = tag
         androidResources.localeFilters += "en"
         buildConfigField("boolean", "DEMO", "false")
