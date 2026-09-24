@@ -146,7 +146,8 @@ private fun DrawScope.drawRing(
     // wavy progress arc, sampled; wave count grows with the ring so bumps keep a constant size
     val waves = max(8f, (2f * PI.toFloat() * r) / (strokePx * 4.6f))
     path.rewind()
-    val steps = max(24, (sweep * r / 2f).toInt())
+    // 16 points a wave stays within a quarter pixel of the curve, the big ring used to redo ~750 every frame
+    val steps = max(24, (fraction * waves * 16f).toInt())
     for (i in 0..steps) {
         val a = start + sweep * i / steps
         // taper the wave to zero at both ends so caps stay round and centred

@@ -32,7 +32,6 @@ import androidx.compose.material3.Text
 import androidx.activity.compose.ReportDrawnWhen
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -78,6 +77,8 @@ class SubjectLine(val subject: SubjectAttendance, daily: Resource<DailyAttendanc
     /** class list still on its way, nothing final to show yet */
     val counting: Boolean = daily.data == null && daily.error == null
 
+    val checked: Boolean = daily.checked
+
     val started: Boolean = tally != null || (subject.percent ?: 0.0) > 0.0
     val percent: Float = tally?.percent?.toFloat() ?: (subject.percent ?: 0.0).toFloat()
 
@@ -94,17 +95,18 @@ fun rememberAttendance(repo: Repository, meta: Resource<*>, sem: Semester?, seme
     val detail by store.state.collectAsState()
     LaunchedEffect(store) { store.refresh() }
     val subjects = detail.data?.subjects.orEmpty()
-    // the class lists are what make the numbers exact, fetch them all behind the portal's percentages
-    val dailies: List<State<Resource<DailyAttendance>>> = subjects.map { s ->
+    // the class lists are what make the numbers exact, fetch them all behind the portal's percentages.
+    // a line is only rebuilt when its own data changes, so the other cards skip recomposing
+    val lines = subjects.map { s ->
         key(sem.id, s.subjectId) {
             val d = remember { repo.daily(sem, s) }
             LaunchedEffect(d, detail.fetchedAt) { d.refresh() }
-            d.state.collectAsState()
+            val daily by d.state.collectAsState()
+            remember(s, daily) { SubjectLine(s, daily) }
         }
     }
-    val lines = subjects.mapIndexed { i, s -> SubjectLine(s, dailies[i].value) }
     // cached class lists arrive a few ms after the detail, drawing in between would flash placeholders
-    return detail.copy(checked = detail.checked && dailies.all { it.value.checked }) to lines
+    return detail.copy(checked = detail.checked && lines.all { it.checked }) to lines
 }
 
 @Composable
@@ -142,9 +144,10 @@ fun AttendanceScreen() {
         if (resourceStates(detail as Resource<Any>, refresh, empty = { lines.isEmpty() }, emptyTitle = "No attendance for this semester yet") && detail.checked) {
             item("overview") { Overview(lines, target, onTarget = { editTarget = true }) }
             // no item animations: the order never changes, and springing cards come apart from the overview
+            val code = sel.selected?.code
             items(lines, key = { it.subject.subjectId }, contentType = { "subject" }) { line ->
                 SubjectCard(line, target) {
-                    sel.selected?.let { nav.push(Route.Subject(it.code, line.subject.code)) }
+                    code?.let { nav.push(Route.Subject(it, line.subject.code)) }
                 }
             }
         }
