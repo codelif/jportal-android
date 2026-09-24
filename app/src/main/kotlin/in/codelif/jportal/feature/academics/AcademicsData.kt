@@ -64,9 +64,41 @@ private fun fold(semesterCode: String, rows: List<SubjectFaculty>, grades: List<
     }
 
 /** where a regular term sits in time: 2025EVESEM (january) comes right before 2025ODDSEM (july). summer terms get no number */
+private val TERM = Regex("""(\d{4})(ODD|EVE|EVEN)SEM""")
+
 fun term(code: String): Int? {
-    val m = Regex("""(\d{4})(ODD|EVE|EVEN)SEM""").find(code.uppercase()) ?: return null
+    val m = TERM.find(code.uppercase()) ?: return null
     return m.groupValues[1].toInt() * 2 + if (m.groupValues[2] == "ODD") 1 else 0
+}
+
+private fun semesters(
+    results: List<SemesterResult>,
+    grades: Map<String, List<GradeEntry>>,
+    rows: Map<String, List<SubjectFaculty>>,
+    currentCode: String?,
+    currentNumber: String,
+): List<SemesterInfo> {
+    val byNumber = results.associateBy { it.semester }
+    // the grade card's stynumber is just today's semester on every card, so count terms back from the current one instead
+    val anchor = currentCode?.let(::term)
+    val anchorNumber = currentNumber.toIntOrNull()
+    fun numberOf(code: String): Int? {
+        val t = term(code) ?: return null
+        return if (anchor != null && anchorNumber != null) (anchorNumber - (anchor - t)).takeIf { it > 0 } else null
+    }
+    val codes = (listOfNotNull(currentCode) + rows.keys + grades.keys).distinct()
+    return codes.map { code ->
+        val g = grades[code].orEmpty()
+        val number = numberOf(code)
+        SemesterInfo(
+            code = code,
+            number = number,
+            result = number?.let { byNumber[it] },
+            grades = g,
+            subjects = fold(code, rows[code].orEmpty(), g),
+            current = code == currentCode,
+        )
+    }.sortedWith(compareByDescending<SemesterInfo> { it.current }.thenByDescending { term(it.code) ?: 0 })
 }
 
 /**
@@ -107,27 +139,12 @@ fun rememberAcademics(repo: Repository): Academics {
         }
     }
 
-    val byNumber = results.data.orEmpty().associateBy { it.semester }
-    // the grade card's stynumber is just today's semester on every card, so count terms back from the current one instead
-    val anchor = currentCode?.let(::term)
-    val anchorNumber = currentNumber.toIntOrNull()
-    fun numberOf(code: String): Int? {
-        val t = term(code) ?: return null
-        return if (anchor != null && anchorNumber != null) (anchorNumber - (anchor - t)).takeIf { it > 0 } else null
+    // the subjects tab recomposes on every keystroke, folding every semester again each time was most of the typing lag
+    val grades = cards.mapValues { it.value.data?.entries.orEmpty() }
+    val rows = regs.mapValues { it.value.data?.rows.orEmpty() }
+    val semesters = remember(results.data, grades, rows, currentCode, currentNumber) {
+        semesters(results.data.orEmpty(), grades, rows, currentCode, currentNumber)
     }
-    val codes = (listOfNotNull(currentCode) + subjSems.data.orEmpty().map { it.code } + gradeSems.data.orEmpty().map { it.code }).distinct()
-    val semesters = codes.map { code ->
-        val grades = cards[code]?.data?.entries.orEmpty()
-        val number = numberOf(code)
-        SemesterInfo(
-            code = code,
-            number = number,
-            result = number?.let { byNumber[it] },
-            grades = grades,
-            subjects = fold(code, regs[code]?.data?.rows.orEmpty(), grades),
-            current = code == currentCode,
-        )
-    }.sortedWith(compareByDescending<SemesterInfo> { it.current }.thenByDescending { term(it.code) ?: 0 })
 
     val loading = listOf(meta, gradeSems, subjSems).any { it.data == null && it.error == null } ||
         (regs.values + cards.values).any { it.data == null && it.error == null }

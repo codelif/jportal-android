@@ -9,6 +9,7 @@ import androidx.compose.material3.dynamicLightColorScheme
 import androidx.activity.compose.LocalActivity
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 import androidx.compose.runtime.CompositionLocalProvider
@@ -99,13 +100,15 @@ fun JPortalTheme(
     val dark = isDark(mode)
     val context = LocalContext.current
     val dynamic = palette == Palette.Wallpaper && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
-    var scheme = when {
-        dynamic && dark -> dynamicDarkColorScheme(context)
-        dynamic -> dynamicLightColorScheme(context)
-        dark -> jportalDark
-        else -> jportalLight
+    val scheme = remember(dynamic, dark, amoled, context) {
+        val base = when {
+            dynamic && dark -> dynamicDarkColorScheme(context)
+            dynamic -> dynamicLightColorScheme(context)
+            dark -> jportalDark
+            else -> jportalLight
+        }
+        if (dark && amoled) base.amoled() else base
     }
-    if (dark && amoled) scheme = scheme.amoled()
     // system bar icons follow the app's theme, not the phone's, or a forced dark theme gets dark icons on dark
     val activity = LocalActivity.current
     val view = LocalView.current
@@ -117,7 +120,8 @@ fun JPortalTheme(
             }
         }
     }
-    CompositionLocalProvider(LocalExtraColors provides extras(scheme, dark, exact = !dynamic)) {
+    val extra = remember(scheme, dark, dynamic) { extras(scheme, dark, exact = !dynamic) }
+    CompositionLocalProvider(LocalExtraColors provides extra) {
         MaterialTheme(
             colorScheme = scheme,
             typography = JPortalTypography,

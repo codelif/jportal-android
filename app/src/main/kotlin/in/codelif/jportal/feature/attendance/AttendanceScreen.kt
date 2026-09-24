@@ -12,7 +12,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import `in`.codelif.jportal.ui.components.Loading
 import `in`.codelif.jportal.ui.components.Placeholder
@@ -138,7 +138,7 @@ fun AttendanceScreen() {
         if (resourceStates(detail as Resource<Any>, refresh, empty = { lines.isEmpty() }, emptyTitle = "No attendance for this semester yet") && detail.checked) {
             item("overview") { Overview(lines, target, onTarget = { editTarget = true }) }
             // no item animations: the order never changes, and springing cards come apart from the overview
-            items(lines, key = { it.subject.subjectId }) { line ->
+            items(lines, key = { it.subject.subjectId }, contentType = { "subject" }) { line ->
                 SubjectCard(line, target) {
                     sel.selected?.let { nav.push(Route.Subject(it.code, line.subject.code)) }
                 }
@@ -233,7 +233,7 @@ private fun SubjectCard(line: SubjectLine, target: Int, modifier: Modifier = Mod
     ) {
         Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             val started = line.started
-            val ring = if (line.counting) Modifier.alpha(pulse()) else Modifier
+            val ring = if (line.counting) Modifier.pulsing() else Modifier
             AttendanceRing(if (started) line.percent else 0f, target, ring.shared("ring-${s.subjectId}"), size = 60.dp, stroke = 6.dp) {
                 if (!line.counting) {
                     Text(
@@ -327,12 +327,11 @@ private fun RecentDots(recent: List<Boolean>, modifier: Modifier = Modifier) {
     }
 }
 
-/** same breathing as [Placeholder], for things that aren't boxes */
+/** same breathing as [Placeholder], for things that aren't boxes. alpha lives in the layer, nothing recomposes */
 @Composable
-private fun pulse(): Float {
-    val t = rememberInfiniteTransition(label = "pulse")
-    val a by t.animateFloat(0.45f, 0.9f, infiniteRepeatable(tween(850), RepeatMode.Reverse), label = "a")
-    return a
+private fun Modifier.pulsing(): Modifier {
+    val a = rememberInfiniteTransition(label = "pulse").animateFloat(0.45f, 0.9f, infiniteRepeatable(tween(850), RepeatMode.Reverse), label = "a")
+    return graphicsLayer { alpha = a.value }
 }
 
 @Composable
@@ -348,13 +347,20 @@ fun ComponentTags(s: SubjectAttendance) {
     }
 }
 
-/** "DATA STRUCTURES LAB" -> "Data Structures Lab", keeps roman numerals and short acronyms */
-fun String.titleCase(): String = split(' ').joinToString(" ") { w ->
-    when {
-        w.isEmpty() -> w
-        w.matches(Regex("(?i)^(i{1,3}|iv|v|vi{0,3}|ix|x)(-\\w+)?$")) -> w.uppercase()
-        w.length <= 3 && w.none { it.isLowerCase() } && w.any { it.isLetter() } && w !in setOf("AND", "OF", "THE", "FOR", "IN", "TO") -> w
-        w.any { it.isLowerCase() } -> w
-        else -> w.lowercase().replaceFirstChar { it.uppercase() }.let { if (it in setOf("And", "Of", "The", "For", "In", "To", "Using")) it.lowercase() else it }
-    }
-}.replaceFirstChar { it.uppercase() }
+private val ROMAN = Regex("(?i)^(i{1,3}|iv|v|vi{0,3}|ix|x)(-\\w+)?$")
+private val WORDS = setOf("AND", "OF", "THE", "FOR", "IN", "TO")
+private val SMALL = setOf("And", "Of", "The", "For", "In", "To", "Using")
+private val titled = java.util.concurrent.ConcurrentHashMap<String, String>()
+
+/** "DATA STRUCTURES LAB" -> "Data Structures Lab", keeps roman numerals and short acronyms. memoised, lists call it every frame they compose */
+fun String.titleCase(): String = titled.getOrPut(this) {
+    split(' ').joinToString(" ") { w ->
+        when {
+            w.isEmpty() -> w
+            w.matches(ROMAN) -> w.uppercase()
+            w.length <= 3 && w.none { it.isLowerCase() } && w.any { it.isLetter() } && w !in WORDS -> w
+            w.any { it.isLowerCase() } -> w
+            else -> w.lowercase().replaceFirstChar { it.uppercase() }.let { if (it in SMALL) it.lowercase() else it }
+        }
+    }.replaceFirstChar { it.uppercase() }
+}

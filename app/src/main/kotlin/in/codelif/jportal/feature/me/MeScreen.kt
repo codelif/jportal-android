@@ -23,7 +23,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.produceState
+import androidx.compose.ui.graphics.ImageBitmap
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -133,16 +136,19 @@ fun MeScreen() {
 fun Avatar(base64: String?, name: String, sizeDp: Int, revealOnly: Boolean = false) {
     val prefs = LocalGraph.current.prefs
     val shown by prefs.photoState.collectAsState()
-    val bitmap = remember(base64) {
-        base64?.takeIf { it.length > 32 }?.let {
-            runCatching { Base64.decode(it.substringAfter(","), Base64.DEFAULT) }.getOrNull()
-                ?.let { b -> BitmapFactory.decodeByteArray(b, 0, b.size)?.asImageBitmap() }
+    // a jpeg decode is a few frames of work, the me tab gets composed during a swipe into subjects
+    val bitmap by produceState<ImageBitmap?>(null, base64) {
+        value = withContext(Dispatchers.Default) {
+            base64?.takeIf { it.length > 32 }?.let {
+                runCatching { Base64.decode(it.substringAfter(","), Base64.DEFAULT) }.getOrNull()
+                    ?.let { b -> BitmapFactory.decodeByteArray(b, 0, b.size)?.asImageBitmap() }
+            }
         }
     }
     var m = Modifier.size(sizeDp.dp).clip(CircleShape)
     if (bitmap != null && !(revealOnly && shown)) m = m.clickable(onClickLabel = if (shown) "Hide photo" else "Show photo") { prefs.setPhoto(!shown) }
     Crossfade(bitmap != null && shown, m, label = "photo") { photo ->
-        if (photo) Image(bitmap!!, "Photo", Modifier.size(sizeDp.dp), contentScale = ContentScale.Crop)
+        if (photo) Image(bitmap ?: return@Crossfade, "Photo", Modifier.size(sizeDp.dp), contentScale = ContentScale.Crop)
         else Initials(name, sizeDp)
     }
 }

@@ -80,7 +80,8 @@ fun SubjectScreen(route: Route.Subject) {
     LaunchedEffect(dailyStore) { dailyStore?.refresh() }
 
     val classes = daily.data?.classes.orEmpty()
-    val tally = AttendanceMath.tally(classes)
+    val tally = remember(classes) { AttendanceMath.tally(classes) }
+    val newestFirst = remember(classes) { classes.sortedWith(compareByDescending<ClassRecord> { it.date }.thenByDescending { it.start }) }
     val percent = if (tally.total > 0) tally.percent.toFloat() else (subject?.percent ?: 0.0).toFloat()
     val calendar = remember(classes) { AttendanceMath.calendar(classes) }
     val trend = remember(classes) { AttendanceMath.trend(classes).map { it.second.toFloat() } }
@@ -206,7 +207,7 @@ fun SubjectScreen(route: Route.Subject) {
         }
         if (classes.isNotEmpty()) {
             item("classes-h") { SectionHeader("Every class") }
-            items(classes.sortedWith(compareByDescending<ClassRecord> { it.date }.thenByDescending { it.start }), key = { it.datetime + it.present + it.takenBy }) { c ->
+            items(newestFirst, key = { it.datetime + it.present + it.takenBy }, contentType = { "class" }) { c ->
                 ClassRow(c)
             }
         }

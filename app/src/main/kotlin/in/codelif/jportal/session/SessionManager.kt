@@ -7,6 +7,8 @@ import `in`.codelif.ktjiit.auth.Session
 import `in`.codelif.ktjiit.http.PortalException
 import `in`.codelif.ktjiit.http.Transport
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -96,10 +98,13 @@ class SessionManager(private val store: SessionStore, val transport: Transport) 
         }
     }
 
-    /** runs [block] with a live portal, renewing once if the server says the token died */
-    suspend fun <T> call(block: suspend (Portal) -> T): T {
+    /**
+     * runs [block] with a live portal, renewing once if the server says the token died.
+     * off main: decrypting, json and the marks pdf all happen inside [block].
+     */
+    suspend fun <T> call(block: suspend (Portal) -> T): T = withContext(Dispatchers.Default) {
         val s = valid(forceRenew = false)
-        return try {
+        try {
             block(Portal(s, transport))
         } catch (e: PortalException.SessionExpired) {
             block(Portal(valid(forceRenew = true), transport))

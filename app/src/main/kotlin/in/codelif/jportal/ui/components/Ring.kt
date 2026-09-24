@@ -1,12 +1,7 @@
 package `in`.codelif.jportal.ui.components
 
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
@@ -15,6 +10,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.withFrameNanos
+import `in`.codelif.jportal.ui.nav.LocalOnScreen
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -72,21 +70,28 @@ fun AttendanceRing(
     val amp = remember { Animatable(if (filled && safe) 1f else 0f) }
     LaunchedEffect(safe) { amp.animateTo(if (safe) 1f else 0f, tween(600)) }
 
-    val phase = if (animate && safe) {
-        val t = rememberInfiniteTransition(label = "wave")
-        val p by t.animateFloat(0f, (2 * PI).toFloat(), infiniteRepeatable(tween(4200, easing = LinearEasing), RepeatMode.Restart), label = "phase")
-        p
-    } else 0f
+    // read only while drawing: the wave moves every frame, the ring and its text must not recompose with it.
+    // phase comes off the frame clock so every ring stays in step, and rings on a hidden tab just stop
+    val phase = remember { mutableFloatStateOf(0f) }
+    if (animate && safe && LocalOnScreen.current) {
+        LaunchedEffect(Unit) {
+            while (true) withFrameNanos { t -> phase.floatValue = (t % WAVE_NANOS) / WAVE_NANOS.toFloat() * 2f * PI.toFloat() }
+        }
+    }
+    val path = remember { Path() }
 
     Box(modifier.size(size), contentAlignment = Alignment.Center) {
         Canvas(Modifier.size(size)) {
-            drawRing(sweep.value, target / 100f, amp.value, phase, color, scheme.surfaceContainerHighest, scheme.onSurfaceVariant, stroke.toPx())
+            drawRing(path, sweep.value, target / 100f, amp.value, phase.floatValue, color, scheme.surfaceContainerHighest, scheme.onSurfaceVariant, stroke.toPx())
         }
         content()
     }
 }
 
+private const val WAVE_NANOS = 4_200_000_000L
+
 private fun DrawScope.drawRing(
+    path: Path,
     fraction: Float,
     target: Float,
     amplitude: Float,
@@ -135,7 +140,7 @@ private fun DrawScope.drawRing(
     if (fraction <= 0.001f) return
     // wavy progress arc, sampled; wave count grows with the ring so bumps keep a constant size
     val waves = max(8f, (2f * PI.toFloat() * r) / (strokePx * 4.6f))
-    val path = Path()
+    path.rewind()
     val steps = max(24, (sweep * r / 2f).toInt())
     for (i in 0..steps) {
         val a = start + sweep * i / steps

@@ -85,7 +85,7 @@ fun LazyListScope.marksContent(view: MarksView) {
     if (!resourceStates(view.report, view.refresh, empty = { it.subjects.isEmpty() }, emptyTitle = "No marks uploaded yet")) return
     val report = view.report.data!!
     item("summary") { Summary(report) }
-    items(report.subjects, key = { it.code }) { s -> SubjectMarksCard(s, view.semester?.code) }
+    items(report.subjects, key = { it.code }, contentType = { "subject" }) { s -> SubjectMarksCard(s, view.semester?.code) }
 }
 
 private fun weighted(s: SubjectMarks) = s.scores.mapNotNull { it.weighted as? Score.Value }

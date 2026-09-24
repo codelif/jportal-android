@@ -83,11 +83,12 @@ fun Loading(modifier: Modifier = Modifier, size: Dp = 48.dp, color: Color = Mate
     val t = rememberInfiniteTransition(label = "loading")
     val spin by t.animateFloat(0f, 360f, infiniteRepeatable(tween(2600, easing = LinearEasing)), label = "spin")
     val morph by t.animateFloat(0f, 1f, infiniteRepeatable(tween(1300), RepeatMode.Reverse), label = "morph")
+    val path = remember { Path() }
     Canvas(modifier.size(size).graphicsLayer { rotationZ = spin }) {
         val r = this.size.minDimension / 2f * 0.82f
         val lobes = 5f + 3f * morph
         val depth = 0.10f + 0.06f * (1f - morph)
-        val path = Path()
+        path.rewind()
         val steps = 120
         for (i in 0..steps) {
             val a = (2 * PI * i / steps).toFloat()

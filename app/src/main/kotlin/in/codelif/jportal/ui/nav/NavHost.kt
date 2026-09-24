@@ -32,6 +32,9 @@ import kotlinx.coroutines.launch
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.withFrameNanos
@@ -39,6 +42,7 @@ import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.Modifier
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.currentCoroutineContext
@@ -47,6 +51,9 @@ import kotlinx.coroutines.flow.collectLatest
 
 val LocalSharedScope = staticCompositionLocalOf<SharedTransitionScope?> { null }
 val LocalNavScope = staticCompositionLocalOf<AnimatedVisibilityScope?> { null }
+
+/** false for tabs built but swiped away, endless animations there would keep every frame busy */
+val LocalOnScreen = compositionLocalOf { true }
 
 /**
  * the whole navigation: the four tabs side by side in one pager so a swipe
@@ -151,10 +158,21 @@ fun NavHost(nav: Navigator, pager: PagerState, modifier: Modifier = Modifier, co
             ) { route ->
                 CompositionLocalProvider(LocalNavScope provides this) {
                     if (route is Route.Tab) {
+                        // the first frame builds only the tab on screen, the rest follow one at a time once
+                        // the page has settled, so a swipe never has to build a whole tab mid-gesture
+                        var built by remember { mutableIntStateOf(0) }
+                        LaunchedEffect(Unit) {
+                            snapshotFlow { transition.currentState == transition.targetState }.first { it }
+                            while (built < Route.tabs.lastIndex) {
+                                delay(90)
+                                withFrameNanos {}
+                                built++
+                            }
+                        }
                         holder.SaveableStateProvider(TABS) {
                             HorizontalPager(
                                 pager,
-                                beyondViewportPageCount = 1,
+                                beyondViewportPageCount = built,
                                 key = { Route.tabs[it].key },
                                 modifier = Modifier.fillMaxSize().graphicsLayer {
                                     val p = tabBack.value
@@ -163,7 +181,9 @@ fun NavHost(nav: Navigator, pager: PagerState, modifier: Modifier = Modifier, co
                                     shape = RoundedCornerShape(32.dp * p)
                                     clip = p > 0f
                                 },
-                            ) { page -> content(Route.tabs[page]) }
+                            ) { page ->
+                                CompositionLocalProvider(LocalOnScreen provides (page == pager.currentPage)) { content(Route.tabs[page]) }
+                            }
                         }
                     } else {
                         holder.SaveableStateProvider(route.key) { content(route) }

@@ -41,10 +41,13 @@ class Store<T>(
     private suspend fun loadDisk() {
         if (loaded) return
         loaded = true
-        val entry = withContext(Dispatchers.IO) { cache.get(key) }
-        val value = entry?.let { runCatching { Transport.json.decodeFromString(serializer, it.json) }.getOrNull() }
+        // a marks report or a semester of class lists is a lot of json, decoding it on main drops frames
+        val (entry, value) = withContext(Dispatchers.IO) {
+            val e = cache.get(key)
+            e to e?.let { runCatching { Transport.json.decodeFromString(serializer, it.json) }.getOrNull() }
+        }
         _state.update {
-            if (it.data == null && value != null) it.copy(data = value, fetchedAt = entry.fetchedAt, checked = true) else it.copy(checked = true)
+            if (it.data == null && value != null) it.copy(data = value, fetchedAt = entry?.fetchedAt, checked = true) else it.copy(checked = true)
         }
     }
 

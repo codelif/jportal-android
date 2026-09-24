@@ -25,9 +25,11 @@ import `in`.codelif.jportal.LocalGraph
 import `in`.codelif.jportal.R
 import `in`.codelif.ktjiit.model.Semester
 
+private val SEMESTER = Regex("""(\d{4})(ODD|EVE|EVEN|SUM|SUMMER)SEM""", RegexOption.IGNORE_CASE)
+
 /** "2026ODDSEM" -> "Odd 2026" */
 fun prettySemester(code: String): String {
-    val m = Regex("""(\d{4})(ODD|EVE|EVEN|SUM|SUMMER)SEM""", RegexOption.IGNORE_CASE).find(code) ?: return code
+    val m = SEMESTER.find(code) ?: return code
     val kind = when (m.groupValues[2].uppercase()) {
         "ODD" -> "Odd"
         "EVE", "EVEN" -> "Even"
