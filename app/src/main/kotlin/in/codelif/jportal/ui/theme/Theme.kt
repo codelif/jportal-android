@@ -36,9 +36,24 @@ data class ExtraColors(
     val warn: Color,
     private val grades: Map<String, Color> = emptyMap(),
     private val ungraded: Color = Color.Unspecified,
+    private val marks: List<Color> = emptyList(),
+    private val marksInk: List<Color> = emptyList(),
 ) {
     /** jportal's grade colours: greens for a, yellows for b and c+, oranges below, red for the ones that hurt */
     fun grade(letter: String): Color = grades[letter.trim().uppercase()] ?: ungraded
+
+    /** jportal's marks bands for a score out of 1: green from 80%, yellow from 60%, orange from 40%, red below */
+    fun marks(fraction: Double): Color = marks.getOrElse(band(fraction)) { ungraded }
+
+    /** [marks] for text, darker on light where the bar's yellow can't be read */
+    fun marksInk(fraction: Double): Color = marksInk.getOrElse(band(fraction)) { ungraded }
+
+    private fun band(f: Double) = when {
+        f >= 0.8 -> 0
+        f >= 0.6 -> 1
+        f >= 0.4 -> 2
+        else -> 3
+    }
 }
 
 val LocalExtraColors = staticCompositionLocalOf {
@@ -50,6 +65,10 @@ private val gradesDark = mapOf(
     "A+" to 0xFF4ADE80, "A" to 0xFF22C55E, "B+" to 0xFFFACC15, "B" to 0xFFEAB308, "C+" to 0xFFCA8A04,
     "C" to 0xFFF97316, "D" to 0xFFEA580C, "F" to 0xFFEF4444, "I" to 0xFFEF4444, "X" to 0xFFEF4444,
 )
+// jportal's marks-outstanding/good/average/poor
+private val marksDark = listOf(0xFF00C950, 0xFFF0B000, 0xFFFF6A00, 0xFFEF4444)
+private val marksLight = listOf(0xFF16A249, 0xFFF5C73D, 0xFFF58A3D, 0xFFEF4444)
+private val marksLightInk = listOf(0xFF15803D, 0xFFA16207, 0xFFC2410C, 0xFFDC2626)
 private val gradesLight = mapOf(
     "A+" to 0xFF16A34A, "A" to 0xFF15803D, "B+" to 0xFFCA8A04, "B" to 0xFFA16207, "C+" to 0xFF854D0E,
     "C" to 0xFFC2410C, "D" to 0xFF9A3412, "F" to 0xFFDC2626, "I" to 0xFFDC2626, "X" to 0xFFDC2626,
@@ -71,6 +90,8 @@ private fun extras(scheme: ColorScheme, dark: Boolean, exact: Boolean): ExtraCol
         warn = tune(if (dark) Color(0xFFEAB308) else Color(0xFFA16207)),
         grades = (if (dark) gradesDark else gradesLight).mapValues { tune(Color(it.value)) },
         ungraded = scheme.onSurfaceVariant,
+        marks = (if (dark) marksDark else marksLight).map { tune(Color(it)) },
+        marksInk = (if (dark) marksDark else marksLightInk).map { tune(Color(it)) },
     )
 }
 

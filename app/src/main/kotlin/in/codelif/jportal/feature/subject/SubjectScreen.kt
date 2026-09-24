@@ -320,7 +320,7 @@ private fun MarksStrip(scores: List<`in`.codelif.ktjiit.marks.EventScore>) {
 fun ScoreChip(e: `in`.codelif.ktjiit.marks.EventScore, color: Color = MaterialTheme.colorScheme.surfaceContainerLow) {
     val extra = LocalExtraColors.current
     val (main, sub, tint) = when (val m = e.marks) {
-        is Score.Value -> Triple(fmt(m.obtained), "of ${fmt(m.max)}", if (m.max > 0 && m.obtained / m.max >= 0.5) extra.good else MaterialTheme.colorScheme.error)
+        is Score.Value -> Triple(fmt(m.obtained), "of ${fmt(m.max)}", if (m.max > 0) extra.marksInk(m.obtained / m.max) else MaterialTheme.colorScheme.onSurfaceVariant)
         Score.Absent -> Triple("A", "absent", MaterialTheme.colorScheme.error)
         else -> Triple("–", "", MaterialTheme.colorScheme.onSurfaceVariant)
     }

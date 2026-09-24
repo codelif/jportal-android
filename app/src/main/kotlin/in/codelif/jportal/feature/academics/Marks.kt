@@ -30,6 +30,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import `in`.codelif.jportal.ui.theme.LocalExtraColors
 import `in`.codelif.jportal.LocalGraph
 import `in`.codelif.jportal.data.Resource
 import `in`.codelif.jportal.feature.attendance.titleCase
@@ -144,6 +145,7 @@ private fun SubjectMarksCard(s: SubjectMarks, semesterCode: String?) {
                 Spacer(Modifier.height(10.dp))
                 LinearProgressIndicator(
                     progress = { (got / max).toFloat().coerceIn(0f, 1f) },
+                    color = LocalExtraColors.current.marks(got / max),
                     modifier = Modifier.fillMaxWidth().height(6.dp).clip(CircleShape),
                     drawStopIndicator = {},
                 )
