@@ -181,12 +181,13 @@ private fun DayCell(date: LocalDate, mark: DayMark?, selected: Boolean, today: B
                     null -> if (today) drawCircle(scheme.outlineVariant, r, style = Stroke(1.5.dp.toPx()))
                 }
                 if (selected) drawCircle(scheme.primary, r - 1.25.dp.toPx(), style = Stroke(2.5.dp.toPx()))
-                // struck through when missed, so absent never rests on red alone
+                // struck through when missed, so absent never rests on red alone.
+                // None, not null: null keeps whatever the shared layout's paint drew last
                 val text = number()
                 drawText(
                     text, ink,
                     Offset(center.x - text.size.width / 2f, center.y - text.size.height / 2f),
-                    textDecoration = if (mark == DayMark.Absent) TextDecoration.LineThrough else null,
+                    textDecoration = if (mark == DayMark.Absent) TextDecoration.LineThrough else TextDecoration.None,
                 )
             },
     )
