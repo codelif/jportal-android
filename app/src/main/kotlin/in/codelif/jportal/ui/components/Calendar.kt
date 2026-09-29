@@ -1,6 +1,8 @@
 package `in`.codelif.jportal.ui.components
 
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -124,7 +126,7 @@ private fun MonthGrid(month: YearMonth, marks: Map<LocalDate, DayMark>, selected
                     val cell = Modifier.weight(1f).aspectRatio(1f).padding(3.dp)
                     if (n in 1..days) {
                         val date = month.atDay(n)
-                        DayCell(date, marks[date], date == selected, date == today, { number(n) }, cell) { if (marks[date] != null) onSelect(date) }
+                        DayCell(date, marks[date], date == selected, date == today, { number(n) }, cell) { onSelect(date) }
                     } else {
                         Spacer(cell)
                     }
@@ -146,7 +148,12 @@ private fun DayCell(date: LocalDate, mark: DayMark?, selected: Boolean, today: B
     val present = extra.goodContainer
     val absent = scheme.errorContainer
     // read in draw only, a tap animates two cells without recomposing the month
-    val scale = if (mark != null) animateFloatAsState(if (selected) 1f else 0.86f, label = "day") else resting
+    val scale = when {
+        mark != null -> animateFloatAsState(if (selected) 1f else 0.86f, label = "day")
+        // an empty day only animates while it holds the ring, animateFloatAsState would start at 1f and snap
+        selected -> remember { Animatable(0.86f) }.also { a -> LaunchedEffect(a) { a.animateTo(1f) } }.asState()
+        else -> resting
+    }
     val label = when (mark) {
         DayMark.Present -> "present"
         DayMark.Absent -> "absent"
@@ -161,10 +168,10 @@ private fun DayCell(date: LocalDate, mark: DayMark?, selected: Boolean, today: B
     }
     Box(
         modifier.clip(CircleShape)
-            .then(if (mark != null) Modifier.clickable(onClick = onClick) else Modifier)
+            .clickable(onClick = onClick)
             .semantics {
                 contentDescription = "${date.format(SPOKEN)}, $label"
-                if (mark != null) this.selected = selected
+                this.selected = selected
             }
             .drawBehind {
                 val inset = 20.dp.toPx() * (1 - scale.value)

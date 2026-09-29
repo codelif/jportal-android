@@ -33,6 +33,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import `in`.codelif.jportal.LocalGraph
+import `in`.codelif.jportal.data.AppClock
 import `in`.codelif.jportal.data.Resource
 import `in`.codelif.jportal.feature.me.InfoRow
 import `in`.codelif.jportal.ui.components.GradeLetter
@@ -182,8 +183,14 @@ fun SubjectScreen(route: Route.Subject) {
                 AttendanceCalendar(calendar, selectedDay, { haptics.performHapticFeedback(HapticFeedbackType.SegmentTick); day = if (it == selectedDay) null else it.toString() }, Modifier.padding(horizontal = 8.dp))
             }
             item("day") {
+                // the last day picked, so the panel keeps its content while it closes
+                var shown by remember { mutableStateOf(selectedDay) }
+                if (selectedDay != null && selectedDay != shown) shown = selectedDay
                 AnimatedVisibility(selectedDay != null) {
-                    DayClasses(classes.filter { it.date == selectedDay })
+                    shown?.let { d ->
+                        val list = classes.filter { it.date == d }
+                        if (list.isEmpty()) NoClass(d) else DayClasses(list)
+                    }
                 }
             }
         }
@@ -281,6 +288,14 @@ private fun DayClasses(list: List<ClassRecord>) {
         list.forEach { ClassRow(it, compact = true) }
     }
 }
+
+@Composable
+private fun NoClass(day: LocalDate) = Text(
+    if (day.isAfter(AppClock.today())) "Nothing marked yet for ${day.format(DAY)}" else "No class on ${day.format(DAY)}",
+    style = MaterialTheme.typography.bodyMedium,
+    color = MaterialTheme.colorScheme.onSurfaceVariant,
+    modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp),
+)
 
 @Composable
 private fun ClassRow(c: ClassRecord, compact: Boolean = false) {
