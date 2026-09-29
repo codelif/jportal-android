@@ -1,15 +1,15 @@
 package `in`.codelif.jportal
 
+import android.os.Build
 import android.os.SystemClock
 import android.os.Bundle
 import androidx.activity.ComponentActivity
-import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.core.view.WindowCompat
 import `in`.codelif.jportal.ui.AppRoot
 import `in`.codelif.jportal.ui.theme.JPortalTheme
 
@@ -21,10 +21,9 @@ class MainActivity : ComponentActivity() {
             splash.iconView.animate().setStartDelay(left).scaleX(1.15f).scaleY(1.15f).setDuration(250).start()
             splash.view.animate().setStartDelay(left).alpha(0f).setDuration(250).withEndAction { splash.remove() }.start()
         }
-        enableEdgeToEdge(
-            statusBarStyle = SystemBarStyle.auto(android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT),
-            navigationBarStyle = SystemBarStyle.auto(android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT),
-        )
+        WindowCompat.enableEdgeToEdge(window)
+        // WindowCompat drops the 3-button nav scrim, keep it so the buttons stay readable over content
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) window.isNavigationBarContrastEnforced = true
         super.onCreate(savedInstanceState)
         val graph = graph
         setContent {
