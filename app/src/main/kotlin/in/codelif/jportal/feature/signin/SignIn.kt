@@ -265,7 +265,8 @@ fun SignInScreen() {
 @Composable
 fun SignInSheet() {
     val graph = LocalGraph.current
-    ModalBottomSheet(onDismissRequest = {}) {
+    // a dismissed sheet left in composition keeps its invisible window on top, eating every touch
+    ModalBottomSheet(onDismissRequest = { graph.sessions.dismissSheet() }) {
         Column(
             Modifier.fillMaxWidth().padding(horizontal = 24.dp).navigationBarsPadding().imePadding().padding(bottom = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),

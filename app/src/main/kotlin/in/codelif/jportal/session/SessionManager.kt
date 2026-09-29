@@ -63,6 +63,11 @@ class SessionManager(private val store: SessionStore, val transport: Transport, 
         _reauth.value = null
     }
 
+    /** the sheet was swiped away, it comes back with the next refresh that can't renew */
+    fun dismissSheet() {
+        _needsSheet.value = false
+    }
+
     fun reauthFailed() {
         _reauth.value?.complete(null)
         _reauth.value = null
