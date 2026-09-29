@@ -37,6 +37,7 @@ import `in`.codelif.jportal.LocalGraph
 import `in`.codelif.jportal.R
 import `in`.codelif.jportal.data.Resource
 import `in`.codelif.jportal.data.Store
+import `in`.codelif.jportal.feature.academics.Figure
 import `in`.codelif.jportal.feature.attendance.nameCase
 import `in`.codelif.jportal.feature.attendance.titleCase
 import `in`.codelif.jportal.feature.subject.byCode
@@ -49,6 +50,7 @@ import `in`.codelif.jportal.ui.components.SectionHeader
 import `in`.codelif.jportal.ui.components.SemesterPicker
 import `in`.codelif.jportal.ui.components.StaleNotice
 import `in`.codelif.jportal.ui.components.resourceStates
+import `in`.codelif.jportal.ui.theme.LocalExtraColors
 import `in`.codelif.ktjiit.model.MoocRequest
 import `in`.codelif.ktjiit.model.MoocStage
 import `in`.codelif.ktjiit.model.MoocStatus
@@ -154,17 +156,17 @@ private fun ChoiceRow(c: SubjectChoice, ranked: Boolean) {
         Column(Modifier.weight(1f)) {
             Text(c.name.titleCase(), style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
             Text(
-                listOfNotNull(c.code, "${fmt(c.credits)} credits".takeIf { c.credits > 0 }, "audit".takeIf { c.isAudit }).joinToString(" · "),
+                listOfNotNull(c.code, "audit".takeIf { c.isAudit }).joinToString(" · "),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+        Spacer(Modifier.width(12.dp))
         if (ranked && got) {
-            Spacer(Modifier.width(8.dp))
-            Ic(R.drawable.ic_check_circle, null, Modifier.size(18.dp), MaterialTheme.colorScheme.primary)
-            Spacer(Modifier.width(4.dp))
-            Text("Allotted", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+            Ic(R.drawable.ic_check_circle, "Allotted", Modifier.size(18.dp), MaterialTheme.colorScheme.primary)
+            Spacer(Modifier.width(12.dp))
         }
+        Figure(fmt(c.credits), "credits", LocalExtraColors.current.credits)
     }
 }
 
