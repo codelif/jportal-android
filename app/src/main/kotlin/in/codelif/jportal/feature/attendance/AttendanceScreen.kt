@@ -363,8 +363,10 @@ fun ComponentTags(s: SubjectAttendance) {
 }
 
 private val ROMAN = Regex("(?i)^(i{1,3}|iv|v|vi{0,3}|ix|x)(-\\w+)?$")
-private val WORDS = setOf("AND", "OF", "THE", "FOR", "IN", "TO", "LAB")
-private val SMALL = setOf("And", "Of", "The", "For", "In", "To", "Using")
+// no vowel means an acronym (DSP, DBMS). ones with vowels have to be listed
+private val CONSONANTS = Regex("[B-DF-HJ-NP-TV-XZ]{3,}")
+private val ACRONYMS = setOf("IOT")
+private val SMALL = setOf("And", "Of", "The", "For", "In", "To", "Using", "A", "An", "Or", "Nor", "But", "Yet", "So")
 private val titled = java.util.concurrent.ConcurrentHashMap<String, String>()
 
 private val named = java.util.concurrent.ConcurrentHashMap<String, String>()
@@ -381,14 +383,15 @@ fun String.nameCase(): String = named.getOrPut(this) {
     out.toString()
 }
 
-/** "DATA STRUCTURES LAB" -> "Data Structures Lab", keeps roman numerals and short acronyms. memoised, lists call it every frame they compose */
+/** "DATA STRUCTURES LAB" -> "Data Structures Lab", keeps roman numerals and acronyms. memoised, lists call it every frame they compose */
 fun String.titleCase(): String = titled.getOrPut(this) {
     split(' ').joinToString(" ") { w ->
+        val core = w.trim { !it.isLetter() }
         when {
             w.isEmpty() -> w
             w.matches(ROMAN) -> w.uppercase()
-            w.length <= 3 && w.none { it.isLowerCase() } && w.any { it.isLetter() } && w !in WORDS && !w.endsWith('.') -> w
             w.any { it.isLowerCase() } -> w
+            core in ACRONYMS || core.matches(CONSONANTS) -> w
             else -> w.lowercase().replaceFirstChar { it.uppercase() }.let { if (it in SMALL) it.lowercase() else it }
         }
     }.replaceFirstChar { it.uppercase() }

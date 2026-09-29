@@ -1,5 +1,6 @@
 package `in`.codelif.jportal.domain
 
+import `in`.codelif.jportal.feature.attendance.titleCase
 import `in`.codelif.ktjiit.model.ClassRecord
 import `in`.codelif.ktjiit.model.SemesterResult
 import org.junit.Assert.assertEquals
@@ -48,6 +49,19 @@ class DomainTest {
         // (160 + 180 + 200) / 60
         assertEquals(9.0, pts[2].cgpa, 1e-9)
         assertEquals(true, pts[2].projected)
+    }
+
+    @Test
+    fun `title case keeps acronyms, not short words`() {
+        assertEquals("Blockchain and Its Applications", "BLOCKCHAIN AND ITS APPLICATIONS".titleCase())
+        assertEquals("Database Systems and Web", "DATABASE SYSTEMS AND WEB".titleCase())
+        assertEquals("Fundamentals of IOT Analytics Lab", "FUNDAMENTALS OF IOT ANALYTICS LAB".titleCase())
+        assertEquals("Digital Signal Processing (DSP)", "DIGITAL SIGNAL PROCESSING (DSP)".titleCase())
+        assertEquals("An Introduction to DBMS", "AN INTRODUCTION TO DBMS".titleCase())
+        assertEquals("Summer Training - II", "SUMMER TRAINING - II".titleCase())
+        assertEquals("Indian Constitution & Traditional Knowledge", "INDIAN CONSTITUTION & TRADITIONAL KNOWLEDGE".titleCase())
+        // the portal already cased it, leave it alone
+        assertEquals("Artificial Intelligence and Machine Learning", "Artificial Intelligence and Machine Learning".titleCase())
     }
 
     @Test
