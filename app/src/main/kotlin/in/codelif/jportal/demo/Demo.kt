@@ -17,7 +17,9 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import java.time.DayOfWeek
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import java.util.Locale
 import kotlin.random.Random
 
 /**
@@ -184,6 +186,66 @@ object Demo {
             FeeHead(5, type = "Regular", fee = 190000.0, paid = 180000.0, waived = 10000.0),
         )))
         put("feedback", ListSerializer(FeedbackEvent.serializer()), listOf(FEEDBACK))
+
+        // registration: this semester's choice print and its moocs, frozen before classes began
+        val frozen = today.minusWeeks(10).atTime(12, 29)
+        put("choice_sems", semList, listOf(now))
+        put("choices:${now.id}", ListSerializer(SubjectChoice.serializer()), choices(frozen.format(FROZE)))
+        put("mooc_sems", semList, listOf(now))
+        put("mooc:${now.id}", MoocStatus.serializer(), mooc(frozen))
+    }
+
+    private val FROZE = DateTimeFormatter.ofPattern("dd-MM-yyyy hh:mm a", Locale.ENGLISH)
+    private val STAGE = DateTimeFormatter.ofPattern("dd-MMM-yyyy hh:mm a", Locale.ENGLISH)
+
+    /** core comes without picking, each elective basket hands out one and the hss one missed the first pick */
+    private fun choices(frozen: String): List<SubjectChoice> {
+        val de = "DE7" to "DEPARTMENTAL ELECTIVE"
+        val hss = "HS7" to "HSS ELECTIVE"
+        fun pick(code: String, name: String, basket: Pair<String, String>, credits: Double, preference: Int, got: Boolean) = SubjectChoice(
+            code = code, name = name, basket = basket.first, basketName = basket.second, type = "Elective", credits = credits,
+            preference = preference, running = if (got) "Y" else "N", elective = "Y", maxSubjects = 1, frozenAt = frozen,
+        )
+        val core = current.filter { it.id != "S3" && it.id != "S6" }.map { s ->
+            SubjectChoice(
+                code = s.code, name = s.name, basket = "C7", basketName = "CORE", type = "Core", credits = s.credits,
+                running = "Y", audit = if (s.audit) "Y" else "N", frozenAt = frozen,
+            )
+        }
+        return core + listOf(
+            pick("15B1NCI731", "CLOUD COMPUTING", de, 4.0, 1, got = true),
+            pick("15B1NCI734", "BLOCKCHAIN TECHNOLOGY", de, 4.0, 2, got = false),
+            pick("15B1NCI735", "COMPUTER VISION", de, 4.0, 3, got = false),
+            pick("16B1NHS733", "CONSUMER BEHAVIOUR", hss, 3.0, 1, got = false),
+            pick("16B1NHS732", "MARKETING MANAGEMENT", hss, 3.0, 2, got = true),
+            pick("16B1NHS734", "INTERNATIONAL TRADE", hss, 3.0, 3, got = false),
+        )
+    }
+
+    /** one waiting on approval, one approved, one turned down, and the exam fee still due */
+    private fun mooc(from: LocalDateTime): MoocStatus {
+        fun on(days: Long) = from.plusDays(days).format(STAGE)
+        val submitted = "Submitted on ${on(0)}@D"
+        val reviewed = "1. Review  Date:- ${on(3)}  by DR. MEERA IYER (REVIEW BY MOOCD )@D"
+        return MoocStatus(
+            requests = listOf(
+                MoocRequest(
+                    "NOC26-CS45", "PRIVACY AND SECURITY IN ONLINE SOCIAL MEDIA", "CURRENT Againts(15B1NCI731-CLOUD COMPUTING)", "Pending",
+                    listOf(submitted, reviewed, "2. Approved@P"),
+                ),
+                MoocRequest(
+                    "NOC26-HS21", "ENTREPRENEURSHIP ESSENTIALS", "ADDITIONAL", "Approved",
+                    listOf(submitted, reviewed, "2. Approved  Date:- ${on(6)}  by DR. POOJA DAS (APPROVED BY HOD )@D"),
+                ),
+            ),
+            rejected = listOf(
+                MoocRequest(
+                    "NOC26-CS10", "BLOCKCHAIN AND ITS APPLICATIONS", "CURRENT Againts(16B1NHS732-MARKETING MANAGEMENT)", "Rejected",
+                    listOf(submitted, "1. Rejected  Date:- ${on(2)}  by DR. MEERA IYER (REVIEW BY MOOCD )@D"),
+                ),
+            ),
+            dues = 1000.0,
+        )
     }
 
     private val FEEDBACK = FeedbackEvent("FB1", "Odd semester 2026 feedback", "FB2026ODD")
