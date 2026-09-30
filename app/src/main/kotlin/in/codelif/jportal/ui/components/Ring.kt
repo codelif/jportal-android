@@ -36,14 +36,13 @@ import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.max
 import kotlin.math.min
-import kotlin.math.roundToInt
 import kotlin.math.sin
 
 /**
  * jportal's attendance ring, grown up. the arc is wavy while you're safely
  * above target and flattens out once you're below it, so the shape says it
  * before the number does. a small notch marks the target on the track.
- * with [shortfall], the stretch still missing up to the target is dashed.
+ * with [shortfall], a dot on the track marks the target you're short of.
  */
 @Composable
 fun AttendanceRing(
@@ -86,9 +85,12 @@ fun AttendanceRing(
     }
     val path = remember { Path() }
 
+    // see-through, so it keeps its contrast on a tinted card too
+    val track = scheme.onSurfaceVariant.copy(alpha = 0.25f)
+
     Box(modifier.size(size), contentAlignment = Alignment.Center) {
         Canvas(Modifier.size(size)) {
-            drawRing(path, sweep.value, target / 100f, amp.value, phase.floatValue, color, scheme.surfaceContainerHighest, scheme.onSurfaceVariant, stroke.toPx(), if (shortfall) scheme.error else null)
+            drawRing(path, sweep.value, target / 100f, amp.value, phase.floatValue, color, track, scheme.onSurfaceVariant, stroke.toPx(), if (shortfall) scheme.error else null)
         }
         // the ring is a fixed size graphic, text inside it can grow a little with the font but not past the stroke
         val d = LocalDensity.current
@@ -134,26 +136,11 @@ private fun DrawScope.drawRing(
     }
 
     val tAngle = start + target * 2f * PI.toFloat()
-    // dashes from past the arc's end up to the target, spaced so the last one ends right on it
-    val from = start + sweep + strokePx * 0.75f / r
-    val dashes = shortfall?.takeIf { fraction > 0.001f && tAngle > from }
-    if (dashes != null) {
-        val w = strokePx / 3f
-        val dash = w * 0.9f / r
-        val n = max(1, ((tAngle - from) * r / (strokePx * 0.72f)).roundToInt())
-        val step = if (n > 1) (tAngle - from - dash) / (n - 1) else 0f
-        for (i in 0 until n) {
-            val a = tAngle - dash - (n - 1 - i) * step
-            drawArc(
-                dashes, Math.toDegrees(a.toDouble()).toFloat(), Math.toDegrees(dash.toDouble()).toFloat(),
-                false, topLeft = androidx.compose.ui.geometry.Offset(cx - r, cy - r),
-                size = androidx.compose.ui.geometry.Size(2 * r, 2 * r), style = Stroke(width = w, cap = StrokeCap.Round),
-            )
-        }
-    }
+    val dot = shortfall?.takeIf { fraction > 0.001f && tAngle > start + sweep }
+    if (dot != null) drawCircle(dot, strokePx * 0.3f, androidx.compose.ui.geometry.Offset(cx + r * cos(tAngle), cy + r * sin(tAngle)))
 
-    // target notch, only when the arc isn't sitting on it and no dashes already end there
-    if (dashes == null && strokePx >= 10f * density && target in 0.01f..0.99f && (tAngle > start + sweep + gap)) {
+    // target notch, only when the arc isn't sitting on it and no dot marks it already
+    if (dot == null && strokePx >= 10f * density && target in 0.01f..0.99f && (tAngle > start + sweep + gap)) {
         val inner = r - strokePx * 0.15f
         val outer = r + strokePx * 0.15f
         drawLine(
