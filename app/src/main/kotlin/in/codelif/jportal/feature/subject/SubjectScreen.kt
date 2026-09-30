@@ -137,7 +137,7 @@ fun SubjectScreen(route: Route.Subject) {
                 if (subject != null) {
                     // same rule as the list card: nothing counted and nothing from the portal means it hasn't started
                     val started = tally.total > 0 || (subject.percent ?: 0.0) > 0.0
-                    AttendanceRing(if (started) percent else 0f, target, Modifier.shared("ring-${subject.subjectId}"), size = 184.dp, stroke = 16.dp, fill = false) {
+                    AttendanceRing(if (started) percent else 0f, target, Modifier.shared("ring-${subject.subjectId}"), size = 184.dp, stroke = 16.dp, fill = false, shortfall = true) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(if (started) "${percent.roundToInt()}%" else "–", style = NumberStyle, color = if (started) Color.Unspecified else MaterialTheme.colorScheme.onSurfaceVariant)
                             if (tally.total > 0) Text("${tally.attended} of ${tally.total}", style = MaterialTheme.typography.labelLarge)

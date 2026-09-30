@@ -1,5 +1,6 @@
 package `in`.codelif.jportal.feature.attendance
 
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -10,6 +11,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.graphics.graphicsLayer
@@ -233,17 +235,21 @@ private fun Overview(lines: List<SubjectLine>, target: Int, onTarget: () -> Unit
 private fun SubjectCard(line: SubjectLine, target: Int, modifier: Modifier = Modifier, onClick: () -> Unit) {
     val s = line.subject
     val extra = LocalExtraColors.current
+    val base = MaterialTheme.colorScheme.surfaceContainerLow
+    val below = line.started && line.percent < target
+    // same 600ms as the ring's wave flattening, so both change together
+    val card by animateColorAsState(if (below) MaterialTheme.colorScheme.error.copy(alpha = 0.10f).compositeOver(base) else base, tween(600), label = "card")
     Surface(
         onClick = onClick,
         shape = MaterialTheme.shapes.large,
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        color = card,
         modifier = modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 5.dp),
     ) {
         Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             val started = line.started
             // the portal's number reads fine while the count runs, only a ring with nothing to show breathes
             val ring = if (line.counting && !started) Modifier.pulsing() else Modifier
-            AttendanceRing(if (started) line.percent else 0f, target, ring.shared("ring-${s.subjectId}"), size = 60.dp, stroke = 6.dp) {
+            AttendanceRing(if (started) line.percent else 0f, target, ring.shared("ring-${s.subjectId}"), size = 60.dp, stroke = 6.dp, shortfall = true) {
                 if (started || !line.counting) {
                     FitText(
                         if (started) "${line.percent.roundToInt()}" else "–",
