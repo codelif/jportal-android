@@ -144,7 +144,7 @@ fun SubjectScreen(route: Route.Subject) {
                         }
                     }
                     Spacer(Modifier.height(16.dp))
-                    if (tally.total > 0) Verdict(tally.canMiss(target), tally.mustAttend(target), target)
+                    if (tally.total > 0) Verdict(tally.canMiss(target), tally.mustAttend(target), target, exact = tally.attended * 100 == target * tally.total)
                     else if (!started) Text("No classes marked yet", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     grade?.grade?.takeIf { it.isNotBlank() }?.let { g ->
                         Spacer(Modifier.height(12.dp))
@@ -232,13 +232,14 @@ private fun Placeholder(onBack: () -> Unit) = ScreenScaffold(title = "", onBack 
 }
 
 @Composable
-private fun Verdict(miss: Int, need: Int, target: Int) {
+private fun Verdict(miss: Int, need: Int, target: Int, exact: Boolean) {
     val extra = LocalExtraColors.current
     val (text, color) = when {
         need == Int.MAX_VALUE -> "Can't reach $target% any more this semester" to MaterialTheme.colorScheme.error
         need > 0 -> "Attend the next $need ${if (need == 1) "class" else "classes"} to reach $target%" to MaterialTheme.colorScheme.error
         miss > 0 -> "You can miss $miss ${if (miss == 1) "class" else "classes"} and stay above $target%" to extra.good
-        else -> "Exactly on $target%, the next absence drops you under" to extra.warn
+        // no absence to spare yet not under: 18/27 is 66.7, 18/28 is 64.3
+        else -> "${if (exact) "Exactly on" else "Just above"} $target%, the next absence drops you under" to extra.warn
     }
     Surface(shape = CircleShape, color = color.copy(alpha = 0.14f)) {
         Text(text, style = MaterialTheme.typography.labelLarge, color = color, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
