@@ -29,7 +29,8 @@ data class Tally(val attended: Int, val total: Int) {
 enum class DayMark { Present, Absent, Mixed }
 
 object AttendanceMath {
-    fun tally(classes: List<ClassRecord>) = Tally(classes.count { it.isPresent }, classes.size)
+    /** the portal's rule: every present class over the regular ones, an extra can only help */
+    fun tally(classes: List<ClassRecord>) = Tally(classes.count { it.isPresent }, classes.count { !it.isExtra })
 
     /** per day: all present, all absent, or a split day */
     fun calendar(classes: List<ClassRecord>): Map<LocalDate, DayMark> =
@@ -46,9 +47,12 @@ object AttendanceMath {
     fun trend(classes: List<ClassRecord>): List<Pair<LocalDate, Double>> {
         val sorted = classes.filter { it.date != null }.sortedWith(compareBy({ it.date }, { it.start }))
         var present = 0
-        return sorted.mapIndexed { i, c ->
+        var regular = 0
+        return sorted.mapNotNull { c ->
             if (c.isPresent) present++
-            c.date!! to present * 100.0 / (i + 1)
+            if (!c.isExtra) regular++
+            // an extra before any regular class has no bottom to divide by yet
+            if (regular == 0) null else c.date!! to present * 100.0 / regular
         }
     }
 }

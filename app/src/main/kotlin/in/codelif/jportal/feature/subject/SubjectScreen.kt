@@ -87,7 +87,7 @@ fun SubjectScreen(route: Route.Subject) {
     val classes = daily.data?.classes.orEmpty()
     val tally = remember(classes) { AttendanceMath.tally(classes) }
     val newestFirst = remember(classes) { classes.sortedWith(compareByDescending<ClassRecord> { it.date }.thenByDescending { it.start }) }
-    val percent = if (tally.total > 0) tally.percent.toFloat() else (subject?.percent ?: 0.0).toFloat()
+    val percent = (subject?.percent ?: 0.0).toFloat()
     val calendar = remember(classes) { AttendanceMath.calendar(classes) }
     val trend = remember(classes) { AttendanceMath.trend(classes).map { it.second.toFloat() } }
     var day by rememberSaveable { mutableStateOf<String?>(null) }

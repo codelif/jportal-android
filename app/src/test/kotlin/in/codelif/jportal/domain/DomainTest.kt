@@ -21,6 +21,17 @@ class DomainTest {
     }
 
     @Test
+    fun `extra classes only count when attended`() {
+        fun c(p: Boolean, type: String) = ClassRecord("01/09/2026 (09:00:AM - 09:50 AM)", if (p) "Present" else "Absent", classType = type)
+        // 3 regular (2 present), extra present: 3 of 3, not 3 of 4
+        assertEquals(Tally(3, 3), AttendanceMath.tally(listOf(c(true, "Regular"), c(true, "Regular"), c(false, "Regular"), c(true, "Extra"))))
+        // a missed extra changes nothing
+        assertEquals(Tally(2, 3), AttendanceMath.tally(listOf(c(true, "Regular"), c(true, "Regular"), c(false, "Regular"), c(false, "Extra"))))
+        // attended can pass total, the verdict still holds
+        assertEquals(2, Tally(4, 3).canMiss(75))
+    }
+
+    @Test
     fun `calendar marks split days`() {
         fun c(d: String, t: String, p: Boolean) = ClassRecord("$d ($t)", if (p) "Present" else "Absent")
         val marks = AttendanceMath.calendar(

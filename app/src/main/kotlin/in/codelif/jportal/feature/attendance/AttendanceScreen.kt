@@ -70,8 +70,8 @@ import `in`.codelif.ktjiit.model.SubjectAttendance
 import kotlin.math.roundToInt
 
 /**
- * a subject row. the class list is what makes the numbers exact, the portal's
- * own percentage fills in while it's on its way and when it can't be had.
+ * a subject row. the percentage is always the portal's own, the class list
+ * only adds the counts, the recent dots and the verdict.
  */
 class SubjectLine(val subject: SubjectAttendance, daily: Resource<DailyAttendance>) {
     val tally: Tally? = daily.data?.let { AttendanceMath.tally(it.classes) }?.takeIf { it.total > 0 }
@@ -82,7 +82,8 @@ class SubjectLine(val subject: SubjectAttendance, daily: Resource<DailyAttendanc
     val checked: Boolean = daily.checked
 
     val started: Boolean = tally != null || (subject.percent ?: 0.0) > 0.0
-    val percent: Float = tally?.percent?.toFloat() ?: (subject.percent ?: 0.0).toFloat()
+    // always the portal's own number, the class list only backs the counts
+    val percent: Float = (subject.percent ?: 0.0).toFloat()
 
     /** the last few classes, oldest first, true for present */
     val recent: List<Boolean> = daily.data?.classes.orEmpty().filter { it.date != null }
@@ -97,7 +98,7 @@ fun rememberAttendance(repo: Repository, meta: Resource<*>, sem: Semester?, seme
     val detail by store.state.collectAsState()
     LaunchedEffect(store) { store.refresh() }
     val subjects = detail.data?.subjects.orEmpty()
-    // the class lists are what make the numbers exact, fetch them all behind the portal's percentages.
+    // the class lists back the counts and the verdict, fetch them all behind the portal's percentages.
     // a line is only rebuilt when its own data changes, so the other cards skip recomposing
     val lines = subjects.map { s ->
         key(sem.id, s.subjectId) {

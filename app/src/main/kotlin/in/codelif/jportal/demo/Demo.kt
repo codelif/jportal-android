@@ -308,7 +308,7 @@ object Demo {
                     datetime = "${d.format(DATE)} (${slots[if (lab) 4 else (seed + i) % 4]})",
                     present = if (rnd.nextInt(1000) < s.odds) "Present" else "Absent",
                     takenBy = s.teachers[kind] ?: s.teachers.values.first(),
-                    classType = "Regular",
+                    classType = if (i % 11 == 10) "Extra" else "Regular",
                 )
             }.toList()
     }
