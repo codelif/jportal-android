@@ -36,6 +36,14 @@ object DebugLog {
         while (lines.size > MAX) lines.removeFirst()
     }
 
+    /** something odd that isn't an exception, numbers only */
+    @Synchronized
+    fun note(where: String, text: String) {
+        lines.addLast("${stamp.format(Date())} $where ${redact(text)}")
+        if (BuildConfig.DEBUG) android.util.Log.w("JPortal", lines.last())
+        while (lines.size > MAX) lines.removeFirst()
+    }
+
     @Synchronized
     fun report(context: Context, extra: Map<String, String>): String = buildString {
         appendLine("JPortal ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE}) ${BuildConfig.FLAVOR}")

@@ -2,6 +2,7 @@ package `in`.codelif.jportal.domain
 
 import `in`.codelif.ktjiit.model.ClassRecord
 import java.time.LocalDate
+import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.floor
 
@@ -31,6 +32,13 @@ enum class DayMark { Present, Absent, Mixed }
 object AttendanceMath {
     /** the portal's rule: every present class over the regular ones, an extra can only help */
     fun tally(classes: List<ClassRecord>) = Tally(classes.count { it.isPresent }, classes.count { !it.isExtra })
+
+    /** counted minus the portal's number, or null when they agree. the portal rounds to one decimal, so only a gap past 0.1 means the rule moved */
+    fun drift(server: Double?, classes: List<ClassRecord>): Double? {
+        val t = tally(classes)
+        if (server == null || t.total == 0) return null
+        return (t.percent - server).takeIf { abs(it) > 0.1 }
+    }
 
     /** per day: all present, all absent, or a split day */
     fun calendar(classes: List<ClassRecord>): Map<LocalDate, DayMark> =

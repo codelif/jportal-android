@@ -32,6 +32,19 @@ class DomainTest {
     }
 
     @Test
+    fun `drift flags a count the portal would not agree with`() {
+        fun rows(regular: Int, present: Int, extra: Int, extraPresent: Int) =
+            List(regular) { ClassRecord("01/09/2026 (09:00:AM - 09:50 AM)", if (it < present) "Present" else "Absent", classType = "Regular") } +
+                List(extra) { ClassRecord("02/09/2026 (09:00:AM - 09:50 AM)", if (it < extraPresent) "Present" else "Absent", classType = "Extra") }
+        // 37/39 = 94.87, the portal sent 94.9
+        assertEquals(null, AttendanceMath.drift(94.9, rows(39, 34, 3, 3)))
+        // the old all-rows count would have read 88.1
+        assertEquals(true, AttendanceMath.drift(88.1, rows(39, 34, 3, 3))!! > 0.1)
+        assertEquals(null, AttendanceMath.drift(null, rows(39, 34, 3, 3)))
+        assertEquals(null, AttendanceMath.drift(50.0, emptyList()))
+    }
+
+    @Test
     fun `calendar marks split days`() {
         fun c(d: String, t: String, p: Boolean) = ClassRecord("$d ($t)", if (p) "Present" else "Absent")
         val marks = AttendanceMath.calendar(

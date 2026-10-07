@@ -49,6 +49,7 @@ import androidx.compose.ui.unit.sp
 import `in`.codelif.jportal.LocalGraph
 import `in`.codelif.jportal.data.Repository
 import `in`.codelif.jportal.data.Resource
+import `in`.codelif.jportal.debug.DebugLog
 import `in`.codelif.jportal.domain.AttendanceMath
 import `in`.codelif.jportal.domain.Tally
 import `in`.codelif.jportal.ui.LocalBottomInset
@@ -105,6 +106,14 @@ fun rememberAttendance(repo: Repository, meta: Resource<*>, sem: Semester?, seme
             val d = remember { repo.daily(sem, s) }
             LaunchedEffect(d, detail.fetchedAt) { d.refresh() }
             val daily by d.state.collectAsState()
+            // our count should land on the portal's number, a gap means its rule changed
+            LaunchedEffect(s.percent, daily.fetchedAt) {
+                val classes = daily.data?.classes ?: return@LaunchedEffect
+                AttendanceMath.drift(s.percent, classes)?.let {
+                    val t = AttendanceMath.tally(classes)
+                    DebugLog.note("attendance", "drift %+.1f: portal %.1f, counted %d/%d, extras %d".format(java.util.Locale.US, it, s.percent, t.attended, t.total, classes.count { c -> c.isExtra }))
+                }
+            }
             remember(s, daily) { SubjectLine(s, daily) }
         }
     }
