@@ -5,12 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.provider.CalendarContract
 import android.widget.Toast
-import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -20,6 +15,8 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -36,9 +33,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
@@ -58,7 +53,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.CornerRadius
@@ -66,6 +60,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
@@ -76,21 +71,16 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import `in`.codelif.jportal.LocalGraph
 import `in`.codelif.jportal.R
 import `in`.codelif.jportal.data.AppClock
 import `in`.codelif.jportal.data.Resource
-import `in`.codelif.jportal.domain.Countdown
 import `in`.codelif.jportal.domain.ExamPlan
 import `in`.codelif.jportal.domain.Paper
-import `in`.codelif.jportal.domain.countdown
 import `in`.codelif.jportal.domain.minutes
 import `in`.codelif.jportal.domain.outOf
 import `in`.codelif.jportal.domain.short
@@ -107,11 +97,9 @@ import `in`.codelif.jportal.ui.components.StaleNotice
 import `in`.codelif.jportal.ui.components.group
 import `in`.codelif.jportal.ui.components.resourceStates
 import `in`.codelif.jportal.ui.nav.Route
-import `in`.codelif.jportal.ui.theme.NumberStyle
 import `in`.codelif.ktjiit.model.ExamEvent
 import `in`.codelif.ktjiit.model.Semester
 import kotlinx.coroutines.delay
-import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -131,6 +119,8 @@ class ExamsView(
     /** papers whose room or seat showed up while the screen was open */
     val fresh: Set<String>,
     val plan: ExamPlan,
+    /** papers the calendar sync already wrote */
+    val inCalendar: Set<String>,
     val showDone: Boolean,
     val toggleDone: () -> Unit,
     /** "p:<paper key>" or "d:<date>", what the sheet is showing */
@@ -186,6 +176,15 @@ fun rememberExams(startAt: String?): ExamsView {
     val pending = sheets.filter { (ev, r) -> r.data?.isEmpty() == true && ev.from?.let { dayOf(it) >= today } == true }.map { it.first }
     val plan = remember(papers, now) { ExamPlan.of(papers, now) }
 
+    // the sync follows whatever the portal last said about the current semester
+    val calendar = LocalGraph.current.calendar
+    val syncing by LocalGraph.current.prefs.calendarSyncState.collectAsState()
+    val inCalendar by calendar.synced.collectAsState()
+    val current = sem != null && sem.id == list.firstOrNull()?.id
+    LaunchedEffect(syncing, current, papers, loadingPapers) {
+        if (syncing && current && !loadingPapers && events.data != null) calendar.sync()
+    }
+
     val refresh = {
         repo.examSemesters.refresh(force = true)
         store?.refresh(force = true)
@@ -193,7 +192,7 @@ fun rememberExams(startAt: String?): ExamsView {
         Unit
     }
     return ExamsView(
-        list, sem, events, papers, loadingPapers, pending, fresh, plan,
+        list, sem, events, papers, loadingPapers, pending, fresh, plan, if (syncing) inCalendar else emptySet(),
         showDone, { showDone = !showDone }, sheet, { sheet = it }, { picked = it }, refresh,
     )
 }
@@ -233,17 +232,17 @@ fun LazyListScope.examsContent(view: ExamsView) {
         return
     }
 
-    val next = plan.next
-    if (next != null) item("next") { NextUp(next, view) }
-    else item("wrap") { MessageState(Frog.Party, "That's a wrap", "Every paper on this sheet is done.") }
-    if (next != null && plan.run.size >= 2) item("run") { RunStrip(view) }
+    if (plan.next == null) item("wrap") { MessageState(Frog.Party, "That's a wrap", "Every paper on this sheet is done.") }
+    else if (plan.run.size >= 2) item("run") { RunStrip(view) }
 
     if (plan.days.isNotEmpty()) {
         item("up-h") { SectionHeader("Date sheet") }
         plan.days.forEach { d ->
             if (d.free > 0) item("gap-${d.date}") { Gap(d.free) }
             item("day-${d.date}") { DayHeader(d.date, plan.today) }
-            group("papers-${d.date}", animate = true) { d.papers.forEach { p -> row(p.key) { PaperRow(p, view) } } }
+            d.papers.forEachIndexed { i, p ->
+                item(p.key, "paper") { PaperRow(p, view, up = i > 0, down = i < d.papers.lastIndex, Modifier.animateItem()) }
+            }
         }
     }
     if (view.pending.isNotEmpty()) {
@@ -251,13 +250,15 @@ fun LazyListScope.examsContent(view: ExamsView) {
     }
     if (plan.done.isNotEmpty()) {
         item("done-h") { DoneHeader(plan.done.size, view.showDone, view.toggleDone) }
-        if (view.showDone) group("done", bottom = 16.dp, animate = true) { plan.done.forEach { p -> row(p.key) { PaperRow(p, view) } } }
+        if (view.showDone) plan.done.forEachIndexed { i, p ->
+            item("done/${p.key}", "paper") { PaperRow(p, view, up = i > 0, down = i < plan.done.lastIndex, Modifier.animateItem()) }
+        }
+        item("done-end") { Spacer(Modifier.height(16.dp)) }
     }
 }
 
 private val DAY = DateTimeFormatter.ofPattern("EEEE, d MMMM")
 private val SHORT = DateTimeFormatter.ofPattern("EEE d MMM")
-private val DATE = DateTimeFormatter.ofPattern("d MMM")
 private val TIME = DateTimeFormatter.ofPattern("h:mm a")
 private val CLOCK = DateTimeFormatter.ofPattern("h:mm")
 private val MERIDIEM = DateTimeFormatter.ofPattern("a")
@@ -283,9 +284,6 @@ private fun relative(day: LocalDate, today: LocalDate): String {
     }
 }
 
-/** "4 days to go", "Tomorrow · 3:30 PM", "Now · 22m left" */
-private fun Countdown.line() = if (big.first().isDigit()) "$big $small" else "$big · $small"
-
 private fun subjectOf(p: Paper) = p.slot.subjectName.titleCase()
 
 /** one sentence for talkback, what a sighted glance at the row gets */
@@ -304,132 +302,6 @@ private fun speak(p: Paper, plan: ExamPlan): String {
         plan.clashes[p.key]?.let { "clashes with ${subjectOf(it)}" },
         "next up".takeIf { p.key == plan.next?.key },
     ).joinToString(", ")
-}
-
-@Composable
-private fun NextUp(p: Paper, view: ExamsView) {
-    val plan = view.plan
-    val now = plan.now
-    val live = plan.status(p) == Paper.Status.Live
-    val c = countdown(p, now) { it.format(TIME) }
-    val context = LocalContext.current
-    val nav = LocalNavigator.current
-    val haptics = LocalHapticFeedback.current
-    val scheme = MaterialTheme.colorScheme
-    Surface(
-        color = scheme.tertiaryContainer,
-        contentColor = scheme.onTertiaryContainer,
-        shape = MaterialTheme.shapes.extraLarge,
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-    ) {
-        Column(Modifier.padding(24.dp)) {
-            Text(
-                "${p.event.short} · " + when {
-                    live -> "In progress"
-                    p.day == plan.today -> "Today"
-                    else -> "Next up"
-                },
-                style = MaterialTheme.typography.labelLarge,
-                modifier = Modifier.semantics { heading() },
-            )
-            Spacer(Modifier.height(8.dp))
-            Text(subjectOf(p), style = MaterialTheme.typography.headlineMedium)
-            Spacer(Modifier.height(16.dp))
-            Row(Modifier.semantics(mergeDescendants = true) {}, verticalAlignment = Alignment.Bottom) {
-                AnimatedContent(c.big, transitionSpec = { fadeIn() togetherWith fadeOut() }, label = "countdown") {
-                    Text(it, style = NumberStyle)
-                }
-                Spacer(Modifier.width(8.dp))
-                Text(c.small, style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(bottom = 6.dp))
-            }
-            val start = p.start
-            val over = p.over
-            if (live && start != null && over != null) {
-                val total = Duration.between(start, over).toMinutes().coerceAtLeast(1)
-                val gone = Duration.between(start, now).toMinutes().coerceIn(0, total)
-                Spacer(Modifier.height(12.dp))
-                LinearProgressIndicator(
-                    progress = { gone.toFloat() / total },
-                    color = scheme.tertiary,
-                    trackColor = scheme.onTertiaryContainer.copy(alpha = 0.12f),
-                    modifier = Modifier.fillMaxWidth().height(8.dp).clip(MaterialTheme.shapes.small),
-                )
-            }
-            Spacer(Modifier.height(16.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Ic(R.drawable.ic_schedule, null, Modifier.size(18.dp))
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    listOfNotNull(p.day?.format(SHORT), window(p) ?: "time not out yet", p.duration?.let { minutes(it.toMinutes()) }).joinToString(" · "),
-                    style = MaterialTheme.typography.titleSmall,
-                )
-            }
-            Spacer(Modifier.height(12.dp))
-            SeatTiles(p, now, p.key in view.fresh)
-            if (plan.then.isNotEmpty()) {
-                Spacer(Modifier.height(12.dp))
-                Text(
-                    "Then " + plan.then.joinToString(", ") { t -> subjectOf(t) + (t.slot.start?.let { " at " + it.format(TIME).replace(' ', '\u00A0') } ?: "") },
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            }
-            Spacer(Modifier.height(20.dp))
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (!live) {
-                    Button(
-                        onClick = { haptics.performHapticFeedback(HapticFeedbackType.Confirm); addToCalendar(context, p) },
-                        colors = ButtonDefaults.buttonColors(containerColor = scheme.tertiary, contentColor = scheme.onTertiary),
-                    ) {
-                        Ic(R.drawable.ic_edit_calendar, null, Modifier.size(18.dp))
-                        Spacer(Modifier.width(8.dp))
-                        Text("Add to calendar")
-                    }
-                }
-                view.semester?.let { sem ->
-                    OutlinedButton(
-                        onClick = { nav.push(Route.Subject(sem.code, p.slot.code)) },
-                        border = BorderStroke(1.dp, scheme.onTertiaryContainer.copy(alpha = 0.4f)),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = scheme.onTertiaryContainer),
-                    ) { Text("Subject") }
-                }
-            }
-        }
-    }
-}
-
-/** room and seat are what you hunt for at the hall door, so they get the biggest type after the countdown */
-@Composable
-private fun SeatTiles(p: Paper, now: LocalDateTime, fresh: Boolean) {
-    val s = p.slot
-    val tile = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f)
-    if (!s.seated) {
-        val soon = p.start?.let { Duration.between(now, it).toHours() < 24 } ?: (p.day == now.toLocalDate())
-        Surface(color = tile, shape = MaterialTheme.shapes.large, modifier = Modifier.fillMaxWidth()) {
-            Row(Modifier.padding(horizontal = 16.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
-                Ic(R.drawable.ic_event_seat, null, Modifier.size(20.dp))
-                Spacer(Modifier.width(12.dp))
-                Text(
-                    if (soon) "Room and seat should be out any time now" else "Room and seat usually come out a day before",
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            }
-        }
-        return
-    }
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Tile("Room", s.room.ifBlank { "soon" }, fresh, tile, Modifier.weight(1f))
-        Tile("Seat", s.seat.ifBlank { "soon" }, fresh, tile, Modifier.weight(1f))
-    }
-}
-
-@Composable
-private fun Tile(label: String, value: String, fresh: Boolean, color: Color, modifier: Modifier) {
-    Surface(color = color, shape = MaterialTheme.shapes.large, modifier = modifier.semantics(mergeDescendants = true) {}) {
-        Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
-            Text(if (fresh) "$label · just in" else label, style = MaterialTheme.typography.labelMedium, modifier = Modifier.alpha(0.8f))
-            Text(value, style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold), maxLines = 1, overflow = TextOverflow.Ellipsis)
-        }
-    }
 }
 
 private fun addToCalendar(context: Context, p: Paper) {
@@ -468,23 +340,7 @@ private fun RunStrip(view: ExamsView) {
     val haptics = LocalHapticFeedback.current
     val start = span.indexOfFirst { it >= plan.today }.let { if (it < 0) span.lastIndex else it }
     val state = rememberLazyListState(initialFirstVisibleItemIndex = (start - 1).coerceAtLeast(0))
-    val events = plan.days.flatMap { d -> d.papers.map { it.event } }.distinctBy { it.id }.joinToString(" & ") { it.short }
-    val range = if (first.month == last.month) "${first.dayOfMonth} to ${last.format(DATE)}" else "${first.format(DATE)} to ${last.format(DATE)}"
-    Column(Modifier.fillMaxWidth().padding(top = 12.dp)) {
-        Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                "$events · $range",
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.weight(1f),
-            )
-            Text(
-                "${plan.runDone} of ${plan.runTotal} done",
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.primary,
-            )
-        }
-        Spacer(Modifier.height(8.dp))
+    Column(Modifier.fillMaxWidth().padding(top = 8.dp)) {
         LazyRow(
             state = state,
             contentPadding = PaddingValues(horizontal = 16.dp),
@@ -573,120 +429,117 @@ private fun DayHeader(day: LocalDate?, today: LocalDate) {
     }
 }
 
+// the date sheet as a timeline: clock on the left, a rail through the day, room and seat on the right
+
+/**
+ * one paper. [up] and [down] join the rail to the rows around it, the next paper
+ * gets a tinted block and a thick accent rail across its sitting.
+ */
 @Composable
-private fun PaperRow(p: Paper, view: ExamsView) {
+private fun PaperRow(p: Paper, view: ExamsView, up: Boolean, down: Boolean, modifier: Modifier = Modifier) {
     val plan = view.plan
     val done = plan.status(p) == Paper.Status.Done
+    val next = p.key == plan.next?.key
     val said = speak(p, plan)
-    // big fonts get no room for the subject beside the clock and the seat, so it drops below them
+    val scheme = MaterialTheme.colorScheme
+    // big fonts get no room for the subject beside the seat, so the seat drops under it
     val stacked = LocalDensity.current.fontScale > 1.3f
-    Surface(onClick = { view.openSheet("p:${p.key}") }, color = Color.Transparent) {
-        val box = Modifier.fillMaxWidth().alpha(if (done) 0.6f else 1f).clearAndSetSemantics { contentDescription = said }
-            .padding(start = 16.dp, end = 12.dp, top = 14.dp, bottom = 14.dp)
-        if (stacked) {
-            Column(box) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    TimeBlock(p, done, Alignment.Start)
-                    Spacer(Modifier.weight(1f))
-                    if (!done) SeatBadge(p, p.key in view.fresh)
-                }
-                Spacer(Modifier.height(8.dp))
+    Surface(
+        onClick = { view.openSheet("p:${p.key}") },
+        color = if (next) scheme.tertiaryContainer.copy(alpha = 0.6f) else Color.Transparent,
+        shape = MaterialTheme.shapes.large,
+        modifier = modifier.fillMaxWidth().padding(horizontal = 8.dp),
+    ) {
+        Row(
+            Modifier.fillMaxWidth().height(IntrinsicSize.Min).alpha(if (done) 0.6f else 1f)
+                .clearAndSetSemantics { contentDescription = said }.padding(start = 12.dp, end = 12.dp),
+        ) {
+            TimeBlock(p, done, Modifier.padding(vertical = ROW_PAD))
+            Rail(next, up, down)
+            Column(Modifier.weight(1f).padding(vertical = ROW_PAD)) {
                 PaperText(p, plan, done)
-            }
-        } else {
-            Row(box, verticalAlignment = Alignment.CenterVertically) {
-                TimeBlock(p, done, Alignment.CenterHorizontally)
-                Spacer(Modifier.width(12.dp))
-                PaperText(p, plan, done, Modifier.weight(1f))
-                if (!done) {
-                    Spacer(Modifier.width(8.dp))
+                if (stacked && !done) {
+                    Spacer(Modifier.height(8.dp))
                     SeatBadge(p, p.key in view.fresh)
                 }
+            }
+            if (!stacked && !done) {
+                Spacer(Modifier.width(8.dp))
+                Box(Modifier.padding(vertical = ROW_PAD).align(Alignment.CenterVertically)) { SeatBadge(p, p.key in view.fresh) }
             }
         }
     }
 }
 
+private val ROW_PAD = 12.dp
+
+/** the dot sits level with the clock's first line */
 @Composable
-private fun PaperText(p: Paper, plan: ExamPlan, done: Boolean, modifier: Modifier = Modifier) {
+private fun Rail(next: Boolean, up: Boolean, down: Boolean) {
+    val scheme = MaterialTheme.colorScheme
+    val line = scheme.outlineVariant
+    val accent = scheme.tertiary
+    val clock = MaterialTheme.typography.titleLarge.lineHeight
+    Box(
+        Modifier.width(28.dp).fillMaxHeight().drawBehind {
+            val x = size.width / 2
+            val y = ROW_PAD.toPx() + clock.toPx() / 2
+            val thin = 2.dp.toPx()
+            if (up) drawLine(line, Offset(x, 0f), Offset(x, y), thin)
+            if (down) drawLine(line, Offset(x, y), Offset(x, size.height), thin)
+            if (next) {
+                drawLine(accent, Offset(x, y), Offset(x, size.height - ROW_PAD.toPx()), 6.dp.toPx(), StrokeCap.Round)
+                drawCircle(accent, 7.dp.toPx(), Offset(x, y))
+            } else {
+                drawCircle(line, 5.dp.toPx(), Offset(x, y))
+            }
+        },
+    )
+}
+
+@Composable
+private fun PaperText(p: Paper, plan: ExamPlan, done: Boolean) {
     val clash = plan.clashes[p.key]
-    Column(modifier) {
+    val s = p.slot
+    Text(subjectOf(p), style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
+    val meta = listOfNotNull(
+        s.start?.format(TIME)?.takeIf { done },
+        p.duration?.let { minutes(it.toMinutes()) },
+    ).joinToString(" · ")
+    if (meta.isNotEmpty()) Text(meta, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    if (clash != null && !done) {
+        Spacer(Modifier.height(4.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                subjectOf(p),
-                style = MaterialTheme.typography.titleMedium,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f, fill = false),
-            )
-            when {
-                plan.status(p) == Paper.Status.Live -> Tag("Now")
-                p.key == plan.next?.key -> Tag("Next")
-            }
-        }
-        val s = p.slot
-        Text(
-            if (done) listOfNotNull(s.start?.format(TIME), p.event.short, s.room.takeIf { it.isNotBlank() }).joinToString(" · ")
-            else listOfNotNull(p.duration?.let { minutes(it.toMinutes()) }, p.event.short, s.code.takeIf { it.isNotBlank() }).joinToString(" · "),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        if (clash != null && !done) {
-            Spacer(Modifier.height(4.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Ic(R.drawable.ic_warning, null, Modifier.size(14.dp), tint = MaterialTheme.colorScheme.error)
-                Spacer(Modifier.width(4.dp))
-                Text("Clashes with ${subjectOf(clash)}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.error)
-            }
+            Ic(R.drawable.ic_warning, null, Modifier.size(14.dp), tint = MaterialTheme.colorScheme.error)
+            Spacer(Modifier.width(4.dp))
+            Text("Clashes with ${subjectOf(clash)}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.error)
         }
     }
 }
 
 /** upcoming rows lead with the clock, the day's already above them. done rows lead with the date */
 @Composable
-private fun TimeBlock(p: Paper, done: Boolean, align: Alignment.Horizontal) {
+private fun TimeBlock(p: Paper, done: Boolean, modifier: Modifier) {
     val s = p.slot
     val primary = MaterialTheme.colorScheme.primary
     val bold = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
-    val small = MaterialTheme.typography.labelSmall
-    Column(Modifier.widthIn(min = 64.dp), horizontalAlignment = align) {
+    val small = MaterialTheme.typography.labelMedium
+    val muted = MaterialTheme.colorScheme.onSurfaceVariant
+    Column(modifier.widthIn(min = 52.dp), horizontalAlignment = Alignment.End) {
         val start = s.start
-        val end = s.end
         when {
             done -> {
                 Text(s.day?.dayOfMonth?.toString() ?: "?", style = bold, color = primary)
-                Text(s.day?.format(MONTH)?.uppercase().orEmpty(), style = small)
+                Text(s.day?.format(MONTH)?.uppercase().orEmpty(), style = small, color = muted)
             }
             start != null -> {
-                Text(
-                    buildAnnotatedString {
-                        withStyle(bold.toSpanStyle()) { append(start.format(CLOCK)) }
-                        withStyle(SpanStyle(fontSize = small.fontSize, fontWeight = small.fontWeight)) { append(" " + start.format(MERIDIEM).uppercase()) }
-                    },
-                    color = primary,
-                    maxLines = 1,
-                )
-                if (end != null) {
-                    val sameHalf = (start.hour < 12) == (end.hour < 12)
-                    Text(
-                        "to " + (if (sameHalf) end.format(CLOCK) else end.format(TIME)),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
+                Text(start.format(CLOCK), style = bold, color = primary, maxLines = 1)
+                Text(start.format(MERIDIEM).uppercase(), style = small, color = muted)
             }
             // the portal sent something we can't read, show it as is rather than a dash
             s.from.isNotBlank() -> Text(s.from.trim(), style = MaterialTheme.typography.labelLarge, color = primary, maxLines = 2)
-            else -> Text("TBA", style = bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            else -> Text("TBA", style = bold, color = muted)
         }
-    }
-}
-
-@Composable
-private fun Tag(text: String) {
-    Spacer(Modifier.width(8.dp))
-    Surface(shape = CircleShape, color = MaterialTheme.colorScheme.tertiary, contentColor = MaterialTheme.colorScheme.onTertiary) {
-        Text(text, style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp))
     }
 }
 
@@ -808,7 +661,6 @@ private fun PaperDetail(p: Paper, view: ExamsView) {
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
         Fact(R.drawable.ic_calendar_month, p.day?.format(DAY) ?: "Date not out yet", p.day?.let { relative(it, plan.today) })
         Fact(R.drawable.ic_schedule, window(p) ?: "Time not out yet", p.duration?.toMinutes()?.let(::spokenLength))
-        if (status != Paper.Status.Done) Fact(R.drawable.ic_timer, countdown(p, plan.now) { it.format(TIME) }.line(), null)
         if (s.seated) {
             Fact(R.drawable.ic_meeting_room, s.room.takeIf { it.isNotBlank() }?.let { "Room $it" } ?: "Room not out yet", null)
             Fact(R.drawable.ic_event_seat, s.seat.takeIf { it.isNotBlank() }?.let { "Seat $it" } ?: "Seat not out yet", null)
@@ -822,10 +674,11 @@ private fun PaperDetail(p: Paper, view: ExamsView) {
     Spacer(Modifier.height(20.dp))
     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         if (status == Paper.Status.Upcoming && p.day != null) {
-            Button(onClick = { haptics.performHapticFeedback(HapticFeedbackType.Confirm); addToCalendar(context, p) }) {
-                Ic(R.drawable.ic_edit_calendar, null, Modifier.size(18.dp))
+            val synced = p.key in view.inCalendar
+            Button(onClick = { haptics.performHapticFeedback(HapticFeedbackType.Confirm); addToCalendar(context, p) }, enabled = !synced) {
+                Ic(if (synced) R.drawable.ic_check_circle else R.drawable.ic_edit_calendar, null, Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
-                Text("Add to calendar")
+                Text(if (synced) "In your calendar" else "Add to calendar")
             }
         }
         view.semester?.let { sem ->

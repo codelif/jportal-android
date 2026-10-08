@@ -123,6 +123,8 @@ fun SettingsScreen() {
         }
         item("att-h") { SectionHeader("Attendance") }
         item("att") { Group { row { Entry(R.drawable.ic_flag, "Attendance goal", "$target%") { editTarget = true } } } }
+        item("exam-h") { SectionHeader("Exams") }
+        item("exam") { ExamSyncGroup() }
         item("acc-h") { SectionHeader("Account") }
         item("acc") {
             Group(Modifier.padding(bottom = 16.dp)) {
@@ -161,7 +163,7 @@ private fun <T> Choice(label: String, options: List<T>, selected: T, name: (T) -
 }
 
 @Composable
-private fun Toggle(title: String, subtitle: String, checked: Boolean, onChange: (Boolean) -> Unit) {
+internal fun Toggle(title: String, subtitle: String, checked: Boolean, onChange: (Boolean) -> Unit) {
     val haptics = LocalHapticFeedback.current
     // the whole row is the switch, so talkback stops on it once
     Row(

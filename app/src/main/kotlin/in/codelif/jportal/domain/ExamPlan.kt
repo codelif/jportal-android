@@ -38,16 +38,12 @@ class ExamDay(val date: LocalDate?, val papers: List<Paper>, val free: Int)
 class ExamPlan(
     val now: LocalDateTime,
     val next: Paper?,
-    /** the rest of the next paper's day, after it */
-    val then: List<Paper>,
     val days: List<ExamDay>,
     val done: List<Paper>,
     /** paper key to the paper it overlaps */
     val clashes: Map<String, Paper>,
     /** every exam day of the events still running, for the strip */
     val run: List<LocalDate>,
-    val runDone: Int,
-    val runTotal: Int,
 ) {
     val today: LocalDate get() = now.toLocalDate()
 
@@ -76,13 +72,10 @@ class ExamPlan(
             return ExamPlan(
                 now = now,
                 next = next,
-                then = next?.let { n -> upcoming.filter { it !== n && it.day == n.day && n.day != null } }.orEmpty(),
                 days = days,
                 done = done.sortedWith(compareByDescending(nullsFirst()) { it.start ?: it.day?.atStartOfDay() }),
                 clashes = clashes,
                 run = runPapers.mapNotNull { it.day }.distinct().sorted(),
-                runDone = runPapers.count { it.status(now) == Paper.Status.Done },
-                runTotal = runPapers.size,
             )
         }
 
@@ -91,27 +84,6 @@ class ExamPlan(
             val (s1, s2) = (a.start ?: return false) to (b.start ?: return false)
             val (e1, e2) = a.end to b.end
             return if (e1 != null && e2 != null) s1 < e2 && s2 < e1 else s1 == s2
-        }
-    }
-}
-
-data class Countdown(val big: String, val small: String)
-
-fun countdown(p: Paper, now: LocalDateTime, time: (LocalDateTime) -> String): Countdown {
-    val start = p.start
-    val day = p.day ?: return Countdown("Soon", "date not out yet")
-    val days = ChronoUnit.DAYS.between(now.toLocalDate(), day)
-    if (p.status(now) == Paper.Status.Live) {
-        val left = p.end?.let { Duration.between(now, it).toMinutes() }
-        return Countdown("Now", left?.let { "${minutes(it)} left" } ?: "good luck")
-    }
-    return when {
-        days >= 2 -> Countdown("$days", "days to go")
-        days == 1L -> Countdown("Tomorrow", start?.let(time) ?: "time not out yet")
-        start == null -> Countdown("Today", "time not out yet")
-        else -> {
-            val m = Duration.between(now, start).toMinutes()
-            if (m >= 60) Countdown("${m / 60}h ${m % 60}m", "to go") else Countdown("${m}m", "to go")
         }
     }
 }

@@ -4,6 +4,7 @@ import android.app.Application
 import android.content.Context
 import androidx.compose.runtime.staticCompositionLocalOf
 import `in`.codelif.jportal.data.Cache
+import `in`.codelif.jportal.data.CalendarSync
 import `in`.codelif.jportal.demo.Demo
 import `in`.codelif.jportal.data.Prefs
 import `in`.codelif.jportal.data.Repository
@@ -25,6 +26,7 @@ class AppGraph(context: Context, demo: Boolean = BuildConfig.DEMO) {
     val cache = Cache(context)
     val repo = Repository(cache, sessions, scope) { !this.demo }
     val updates = Updates(context, scope)
+    val calendar = CalendarSync(context, prefs, repo, scope)
 
     /** the made up student is signed in, nothing may touch the portal */
     val demo: Boolean get() = Demo.owns(sessions.session)
@@ -36,6 +38,7 @@ class AppGraph(context: Context, demo: Boolean = BuildConfig.DEMO) {
     }
 
     fun signOut() {
+        calendar.forget()
         sessions.signOut()
         repo.wipe()
         prefs.clearAccountBits()

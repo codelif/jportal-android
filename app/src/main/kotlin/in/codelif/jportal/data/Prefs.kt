@@ -37,6 +37,9 @@ class Prefs(context: Context) {
     private val semester = Pref<String?>("semester", null, { k, d -> sp.getString(k, d) }, { k, v -> putString(k, v) })
     private val photo = Pref("show_photo", false, { k, d -> sp.getBoolean(k, d) }, { k, v -> putBoolean(k, v) })
     private val lastMarks = Pref<String?>("marks_seen", null, { k, d -> sp.getString(k, d) }, { k, v -> putString(k, v) })
+    private val calSync = Pref("cal_sync", false, { k, d -> sp.getBoolean(k, d) }, { k, v -> putBoolean(k, v) })
+    private val calendar = Pref<Long?>("cal_id", null, { k, _ -> sp.getLong(k, -1).takeIf { it >= 0 } }, { k, v -> if (v == null) remove(k) else putLong(k, v) })
+    private val calDenied = Pref("cal_denied", false, { k, d -> sp.getBoolean(k, d) }, { k, v -> putBoolean(k, v) })
 
     val themeModeState get() = themeMode.state
     val paletteState get() = palette.state
@@ -49,6 +52,11 @@ class Prefs(context: Context) {
     val marksSeenState get() = lastMarks.state
     /** profile photo off until tapped, people open this app around other people */
     val photoState get() = photo.state
+    /** upcoming papers go to [calendarState] */
+    val calendarSyncState get() = calSync.state
+    val calendarState get() = calendar.state
+    /** sync flipped off because calendar access went away */
+    val calendarDeniedState get() = calDenied.state
 
     fun setThemeMode(v: ThemeMode) = themeMode.set(v)
     fun setPalette(v: Palette) = palette.set(v)
@@ -58,6 +66,9 @@ class Prefs(context: Context) {
     fun setSemester(code: String?) = semester.set(code)
     fun setMarksSeen(v: String?) = lastMarks.set(v)
     fun setPhoto(v: Boolean) = photo.set(v)
+    fun setCalendarSync(v: Boolean) = calSync.set(v)
+    fun setCalendar(id: Long?) = calendar.set(id)
+    fun setCalendarDenied(v: Boolean) = calDenied.set(v)
 
     fun clearAccountBits() {
         semester.set(null)
