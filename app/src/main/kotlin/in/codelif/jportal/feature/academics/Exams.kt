@@ -490,7 +490,8 @@ private fun Rail(next: Boolean, up: Boolean, down: Boolean) {
             if (up) drawLine(line, Offset(x, 0f), Offset(x, y), thin)
             if (down) drawLine(line, Offset(x, y), Offset(x, size.height), thin)
             if (next) {
-                drawLine(accent, Offset(x, y), Offset(x, size.height - ROW_PAD.toPx()), 6.dp.toPx(), StrokeCap.Round)
+                // the tail only leads somewhere when a paper follows
+                if (down) drawLine(accent, Offset(x, y), Offset(x, size.height - ROW_PAD.toPx()), 6.dp.toPx(), StrokeCap.Round)
                 drawCircle(accent, 7.dp.toPx(), Offset(x, y))
             } else {
                 drawCircle(line, 5.dp.toPx(), Offset(x, y))
