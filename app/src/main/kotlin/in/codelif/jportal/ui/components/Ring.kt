@@ -98,7 +98,7 @@ fun AttendanceRing(
     }
 }
 
-private const val WAVE_NANOS = 4_200_000_000L
+internal const val WAVE_NANOS = 4_200_000_000L
 
 private fun DrawScope.drawRing(
     path: Path,

@@ -22,6 +22,7 @@ import `in`.codelif.jportal.data.Palette
 import `in`.codelif.jportal.data.ThemeMode
 import `in`.codelif.jportal.demo.Demo
 import `in`.codelif.jportal.ui.AppRoot
+import `in`.codelif.jportal.ui.components.WAVE_NANOS
 import `in`.codelif.jportal.ui.theme.JPortalTheme
 import org.junit.After
 import org.junit.Before
@@ -94,8 +95,24 @@ class ScreensTest(private val look: Look) {
     }
 
     private fun shot(name: String) {
+        lineUpWave()
         compose.onRoot().captureRoboImage("src/test/screenshots/${name}_${look.name.lowercase()}.png")
     }
+
+    /**
+     * the ring's wave reads the frame clock, so without this the shot depends on how long
+     * the test took to get there. frames land every 16ms, a wave is 4.2s, both meet every 8.4s
+     */
+    private fun lineUpWave() {
+        val cycle = lcm(WAVE_NANOS / 1_000_000, 16)
+        val now = compose.mainClock.currentTime
+        val wait = (cycle - now % cycle) % cycle
+        if (wait > 0) compose.mainClock.advanceTimeBy(wait)
+        shadowOf(Looper.getMainLooper()).idle()
+    }
+
+    private tailrec fun gcd(a: Long, b: Long): Long = if (b == 0L) a else gcd(b, a % b)
+    private fun lcm(a: Long, b: Long) = a / gcd(a, b) * b
 
     private fun tab(key: String) {
         compose.onNodeWithTag("tab-$key").performClick()
