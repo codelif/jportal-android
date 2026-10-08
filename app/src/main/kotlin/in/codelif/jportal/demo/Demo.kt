@@ -163,8 +163,13 @@ object Demo {
         put("exam_sems", semList, sems.take(2))
         put("exam_ev:${now.id}", ListSerializer(ExamEvent.serializer()), listOf(t2, t1))
         val theory = current.filter { 'L' in it.parts && !it.audit }
-        put("exam_sch:${t1.id}", ListSerializer(ExamSlot.serializer()), theory.mapIndexed { i, s -> slot(s, today.minusDays(40L - i), if (i % 2 == 0) "09:00" to "10:00" else "14:00" to "15:00", i) })
-        put("exam_sch:${t2.id}", ListSerializer(ExamSlot.serializer()), theory.mapIndexed { i, s -> slot(s, today.plusDays(2L + i / 2), if (i % 2 == 0) "09:30" to "11:00" else "14:30" to "16:00", i) })
+        put("exam_sch:${t1.id}", ListSerializer(ExamSlot.serializer()), theory.mapIndexed { i, s -> slot(s, today.minusDays(40L - i), if (i % 2 == 0) "09:00 am" to "10:00 am" else "02:00 pm" to "03:00 pm", i, seated = true) })
+        // the portal's own shapes: "03:30 pm" and a whole "x to y" window, rooms only from a day or two out
+        val t2Days = listOf(2L, 2L, 3L, 6L, 7L, 9L)
+        put("exam_sch:${t2.id}", ListSerializer(ExamSlot.serializer()), theory.mapIndexed { i, s ->
+            val d = t2Days[i % t2Days.size]
+            slot(s, today.plusDays(d), if (i % 2 == 0) "09:30 am" to "11:00 am" else "02:30 pm" to "04:00 pm", i, seated = d <= 3)
+        })
 
         put("marks_sems", semList, sems.take(2))
         put("marks:${now.id}", MarksReport.serializer(), marks(theory))
@@ -317,9 +322,10 @@ object Demo {
         SubjectFaculty(s.id, s.code, s.name, c.toString(), s.teachers[c].orEmpty(), credits = s.credits, audit = if (s.audit) "Y" else "N")
     }
 
-    private fun slot(s: Subj, day: LocalDate, time: Pair<String, String>, i: Int) = ExamSlot(
-        date = day.format(DATE), from = time.first, until = time.second,
-        subject = title(s), code = s.code, room = listOf("CR-4", "LT-2", "G-7", "CR-11")[i % 4], seat = "B${12 + i * 3}",
+    private fun slot(s: Subj, day: LocalDate, time: Pair<String, String>, i: Int, seated: Boolean) = ExamSlot(
+        date = day.format(DATE), from = time.first, until = "${time.first} to ${time.second}",
+        subject = title(s), code = s.code,
+        room = if (seated) listOf("CR-4", "LT-2", "G-7", "CR-11")[i % 4] else "", seat = if (seated) "B${12 + i * 3}" else "",
     )
 
     private fun marks(theory: List<Subj>): MarksReport {

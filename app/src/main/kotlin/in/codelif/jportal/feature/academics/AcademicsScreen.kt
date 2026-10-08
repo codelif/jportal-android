@@ -114,6 +114,7 @@ fun AcademicsScreen() {
             AcademicsView.Exams -> examsContent(exams)
         }
     }
+    if (view == AcademicsView.Exams) ExamSheet(exams)
 }
 
 private val mapSaver = androidx.compose.runtime.saveable.Saver<androidx.compose.runtime.snapshots.SnapshotStateMap<Int, Double>, Map<String, Double>>(
