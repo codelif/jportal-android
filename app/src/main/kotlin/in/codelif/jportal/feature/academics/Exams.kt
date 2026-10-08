@@ -71,8 +71,12 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import `in`.codelif.jportal.LocalGraph
@@ -240,8 +244,8 @@ fun LazyListScope.examsContent(view: ExamsView) {
         plan.days.forEach { d ->
             if (d.free > 0) item("gap-${d.date}") { Gap(d.free) }
             item("day-${d.date}") { DayHeader(d.date, plan.today) }
-            d.papers.forEachIndexed { i, p ->
-                item(p.key, "paper") { PaperRow(p, view, up = i > 0, down = i < d.papers.lastIndex, Modifier.animateItem()) }
+            group("papers-${d.date}", animate = true) {
+                d.papers.forEachIndexed { i, p -> row(p.key) { PaperRow(p, view, up = i > 0, down = i < d.papers.lastIndex) } }
             }
         }
     }
@@ -250,10 +254,9 @@ fun LazyListScope.examsContent(view: ExamsView) {
     }
     if (plan.done.isNotEmpty()) {
         item("done-h") { DoneHeader(plan.done.size, view.showDone, view.toggleDone) }
-        if (view.showDone) plan.done.forEachIndexed { i, p ->
-            item("done/${p.key}", "paper") { PaperRow(p, view, up = i > 0, down = i < plan.done.lastIndex, Modifier.animateItem()) }
+        if (view.showDone) group("done", bottom = 16.dp, animate = true) {
+            plan.done.forEachIndexed { i, p -> row(p.key) { PaperRow(p, view, up = i > 0, down = i < plan.done.lastIndex) } }
         }
-        item("done-end") { Spacer(Modifier.height(16.dp)) }
     }
 }
 
@@ -432,11 +435,11 @@ private fun DayHeader(day: LocalDate?, today: LocalDate) {
 // the date sheet as a timeline: clock on the left, a rail through the day, room and seat on the right
 
 /**
- * one paper. [up] and [down] join the rail to the rows around it, the next paper
- * gets a tinted block and a thick accent rail across its sitting.
+ * one paper, on its group card. [up] and [down] join the rail to the rows around
+ * it, the next paper gets a tinted card and a thick accent rail across its sitting.
  */
 @Composable
-private fun PaperRow(p: Paper, view: ExamsView, up: Boolean, down: Boolean, modifier: Modifier = Modifier) {
+private fun PaperRow(p: Paper, view: ExamsView, up: Boolean, down: Boolean) {
     val plan = view.plan
     val done = plan.status(p) == Paper.Status.Done
     val next = p.key == plan.next?.key
@@ -444,15 +447,14 @@ private fun PaperRow(p: Paper, view: ExamsView, up: Boolean, down: Boolean, modi
     val scheme = MaterialTheme.colorScheme
     // big fonts get no room for the subject beside the seat, so the seat drops under it
     val stacked = LocalDensity.current.fontScale > 1.3f
+    // the group card clips, so a plain tint fills it to its rounded edges
     Surface(
         onClick = { view.openSheet("p:${p.key}") },
         color = if (next) scheme.tertiaryContainer.copy(alpha = 0.6f) else Color.Transparent,
-        shape = MaterialTheme.shapes.large,
-        modifier = modifier.fillMaxWidth().padding(horizontal = 8.dp),
     ) {
         Row(
             Modifier.fillMaxWidth().height(IntrinsicSize.Min).alpha(if (done) 0.6f else 1f)
-                .clearAndSetSemantics { contentDescription = said }.padding(start = 12.dp, end = 12.dp),
+                .clearAndSetSemantics { contentDescription = said }.padding(start = 8.dp, end = 12.dp),
         ) {
             TimeBlock(p, done, Modifier.padding(vertical = ROW_PAD))
             Rail(next, up, down)
@@ -525,7 +527,18 @@ private fun TimeBlock(p: Paper, done: Boolean, modifier: Modifier) {
     val bold = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
     val small = MaterialTheme.typography.labelMedium
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
-    Column(modifier.widthIn(min = 52.dp), horizontalAlignment = Alignment.End) {
+    // every row gets the widest clock's width, or the rail jogs sideways from card to card
+    val measurer = rememberTextMeasurer()
+    val density = LocalDensity.current
+    val width = remember(bold, small, density) {
+        val clock = buildAnnotatedString {
+            withStyle(bold.toSpanStyle()) { append("12:00") }
+            withStyle(SpanStyle(fontSize = small.fontSize, fontWeight = small.fontWeight)) { append(" PM") }
+        }
+        val px = maxOf(measurer.measure(clock).size.width, measurer.measure("to 12:00 PM", small).size.width)
+        with(density) { px.toDp() }
+    }
+    Column(modifier.width(width), horizontalAlignment = Alignment.End) {
         val start = s.start
         when {
             done -> {
@@ -533,8 +546,21 @@ private fun TimeBlock(p: Paper, done: Boolean, modifier: Modifier) {
                 Text(s.day?.format(MONTH)?.uppercase().orEmpty(), style = small, color = muted)
             }
             start != null -> {
-                Text(start.format(CLOCK), style = bold, color = primary, maxLines = 1)
-                Text(start.format(MERIDIEM).uppercase(), style = small, color = muted)
+                Text(
+                    buildAnnotatedString {
+                        append(start.format(CLOCK))
+                        withStyle(SpanStyle(fontSize = small.fontSize, fontWeight = small.fontWeight)) { append(" " + start.format(MERIDIEM).uppercase()) }
+                    },
+                    style = bold,
+                    color = primary,
+                    maxLines = 1,
+                )
+                val end = s.end
+                if (end != null) {
+                    // across noon the end needs its own am/pm
+                    val sameHalf = (start.hour < 12) == (end.hour < 12)
+                    Text("to " + (if (sameHalf) end.format(CLOCK) else end.format(TIME)), style = small, color = muted, maxLines = 1)
+                }
             }
             // the portal sent something we can't read, show it as is rather than a dash
             s.from.isNotBlank() -> Text(s.from.trim(), style = MaterialTheme.typography.labelLarge, color = primary, maxLines = 2)
