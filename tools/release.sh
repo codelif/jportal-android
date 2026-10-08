@@ -15,9 +15,13 @@ cd "$(git rev-parse --show-toplevel)"
 [[ -z $(git -C ktjiit status --porcelain) ]] || die "uncommitted changes in ktjiit"
 git rev-parse -q --verify "refs/tags/$tag" > /dev/null && die "$tag already exists"
 
-last=$(git tag -l 'v*' --sort=-v:refname | head -1)
+last=$(git -c versionsort.suffix=- tag -l 'v*' --sort=-v:refname | head -1)
 if [[ -n $last ]]; then
-    [[ $(printf '%s\n' "$last" "$tag" | sort -V | tail -1) == "$tag" ]] || die "$tag isn't newer than $last"
+    if [[ $tag != *-* && $last == "$tag"-* ]]; then
+        : # A stable release is newer than its prereleases.
+    else
+        [[ $(printf '%s\n' "$last" "$tag" | sort -V | tail -1) == "$tag" ]] || die "$tag isn't newer than $last"
+    fi
 fi
 
 # ci checks these too, failing here is cheaper than failing there
