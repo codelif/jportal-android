@@ -45,7 +45,7 @@ There are two flavors: `github` (can check GitHub for updates, once that is swit
 
 ### Releasing
 
-Bump `versionCode` and `versionName` in `app/build.gradle.kts`, write `fastlane/metadata/android/en-US/changelogs/<versionCode>.txt` (500 characters at most) and commit both. Then `tools/release.sh 0.2.0` checks the tree, makes a signed `v0.2.0` tag (notes from `release-notes.md`, or your editor when that is missing or empty) and stops. Pushing the tag starts the release workflow, which refuses any tag, commit or pinned ktjiit commit not signed by the key in `.github/tag-signer.asc`, then builds, signs and publishes the APK with its checksum. A tag with a dash, like `v0.2.0-rc1`, becomes a prerelease that the app's update check and F-Droid both skip. It needs no bump, its version comes from the tag.
+`tools/release.sh 0.2.0` checks the tree, takes the notes (from `release-notes.md`, or your editor when that is missing or empty), writes the new `versionCode` and `versionName` into `app/build.gradle.kts` and the notes into `fastlane/metadata/android/en-US/changelogs/<versionCode>.txt`, commits both as `chore(release): v0.2.0`, makes a signed `v0.2.0` tag on that commit and stops. The notes are used as written, with heading marks dropped for the stores, and can't be longer than 500 characters. Pushing the tag starts the release workflow, which refuses any tag, commit or pinned ktjiit commit not signed by the key in `.github/tag-signer.asc`, then builds, signs and publishes the APK with its checksum. A tag with a dash, like `v0.2.0-rc1`, becomes a prerelease that the app's update check and F-Droid both skip. It gets the tag and nothing else, its version comes from the tag.
 
 ## Privacy
 
