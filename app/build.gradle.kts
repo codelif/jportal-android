@@ -6,12 +6,16 @@ plugins {
     alias(libs.plugins.roborazzi)
 }
 
-// release builds get their version from the signed tag, see .github/workflows/release.yml
-val tag = providers.environmentVariable("JPORTAL_VERSION").orElse("0.1.0").get().removePrefix("v")
-val (major, minor, patch) = tag.substringBefore('-').split('.').take(3).map { it.toIntOrNull() ?: 0 }.let { it + List(3 - it.size) { 0 } }
+// the tag ci is building, when there is one, see .github/workflows/release.yml
+val tag = providers.environmentVariable("JPORTAL_VERSION").orNull?.removePrefix("v")
+
 // last two digits are the test round, 99 for the release itself: 0.1.0-rc.2 is 10002, 0.1.0 is 10099.
 // play never takes a code twice, so a test build has to sort below its release
-val round = if ('-' in tag) Regex("\\d+").findAll(tag.substringAfter('-')).lastOrNull()?.value?.toIntOrNull()?.coerceIn(1, 98) ?: 1 else 99
+fun codeOf(version: String): Int {
+    val (major, minor, patch) = version.substringBefore('-').split('.').take(3).map { it.toIntOrNull() ?: 0 }.let { it + List(3 - it.size) { 0 } }
+    val round = if ('-' in version) Regex("\\d+").findAll(version.substringAfter('-')).lastOrNull()?.value?.toIntOrNull()?.coerceIn(1, 98) ?: 1 else 99
+    return ((major * 100 + minor) * 100 + patch) * 100 + round
+}
 
 android {
     namespace = "in.codelif.jportal"
@@ -22,8 +26,18 @@ android {
         applicationId = "in.codelif.jportal.android"
         minSdk = 26
         targetSdk = 36
-        versionCode = ((major * 100 + minor) * 100 + patch) * 100 + round
-        versionName = tag
+        // f-droid reads these two lines straight out of this file and builds with no tag in the environment,
+        // so they stay plain literals. tools/release.sh won't tag a release they don't describe
+        versionCode = 10199
+        versionName = "0.1.1"
+        tag?.let { t ->
+            // a test round (v0.2.0-rc.2) is cut without a bump and takes its version from the tag, a release has to match
+            check('-' in t || (t == versionName && codeOf(t) == versionCode)) {
+                "v$t is not the $versionName ($versionCode) in app/build.gradle.kts, bump it before tagging"
+            }
+            versionCode = codeOf(t)
+            versionName = t
+        }
         androidResources.localeFilters += "en"
         buildConfigField("boolean", "DEMO", "false")
     }
@@ -57,7 +71,8 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            signingConfig = signingConfigs.getByName("release").takeIf { it.storeFile != null }
+            // find, not get: f-droid's build strips the signingConfigs block above before it runs gradle
+            signingConfig = signingConfigs.findByName("release")?.takeIf { it.storeFile != null }
                 ?: signingConfigs.getByName("debug")
         }
         debug {
