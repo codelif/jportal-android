@@ -15,7 +15,9 @@ Unofficial. Not affiliated with or endorsed by JIIT.
 
 ## Install
 
-**Obtainium** (recommended, auto-updates from GitHub releases): add `https://github.com/codelif/jportal-android` as an app source.
+**F-Droid**: coming. F-Droid rebuilds every release from source and only ships it when the result is identical to the APK published here, so it carries the same signature and installs over a GitHub or Obtainium copy.
+
+**Obtainium** (auto-updates from GitHub releases): add `https://github.com/codelif/jportal-android` as an app source.
 
 **GitHub Releases**: download the APK from the latest release. Every release is built by CI from a signed tag, and the APK ships with a SHA-256 checksum.
 
@@ -33,7 +35,7 @@ cd jportal-android
 
 The portal client is [ktjiit](https://github.com/codelif/ktjiit), pulled in as a submodule and an included build.
 
-There are two flavors: `github` (checks GitHub for updates) and `play` (doesn't).
+There are two flavors: `github` (can check GitHub for updates, once that is switched on in settings) and `play` (can't). F-Droid ships the `github` one.
 
 ### Tests and benchmarks
 
@@ -43,7 +45,7 @@ There are two flavors: `github` (checks GitHub for updates) and `play` (doesn't)
 
 ### Releasing
 
-`tools/release.sh 0.2.0` checks the tree, makes a signed `v0.2.0` tag (notes from `release-notes.md`, or your editor when that is missing or empty) and stops. Pushing the tag starts the release workflow, which refuses any tag, commit or pinned ktjiit commit not signed by the key in `.github/tag-signer.asc`, then builds, signs and publishes the APK with its checksum. A tag with a dash, like `v0.2.0-rc1`, becomes a prerelease that the app's update check skips.
+Bump `versionCode` and `versionName` in `app/build.gradle.kts`, write `fastlane/metadata/android/en-US/changelogs/<versionCode>.txt` (500 characters at most) and commit both. Then `tools/release.sh 0.2.0` checks the tree, makes a signed `v0.2.0` tag (notes from `release-notes.md`, or your editor when that is missing or empty) and stops. Pushing the tag starts the release workflow, which refuses any tag, commit or pinned ktjiit commit not signed by the key in `.github/tag-signer.asc`, then builds, signs and publishes the APK with its checksum. A tag with a dash, like `v0.2.0-rc1`, becomes a prerelease that the app's update check and F-Droid both skip. It needs no bump, its version comes from the tag.
 
 ## Privacy
 

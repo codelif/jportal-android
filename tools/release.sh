@@ -24,6 +24,20 @@ if [[ -n $last ]]; then
     fi
 fi
 
+# f-droid reads the version out of the build file and the notes out of fastlane/, both have to be
+# in the tagged commit. test rounds skip this, they take their version from the tag
+if [[ $tag != *-* ]]; then
+    gradle=app/build.gradle.kts
+    name=$(sed -nE 's/^ *versionName = "([^"]+)"$/\1/p' "$gradle" | head -1)
+    code=$(sed -nE 's/^ *versionCode = ([0-9]+)$/\1/p' "$gradle" | head -1)
+    IFS=. read -r major minor patch <<< "$v"
+    want=$(( ((10#$major * 100 + 10#$minor) * 100 + 10#$patch) * 100 + 99 ))
+    [[ $name == "$v" && $code == "$want" ]] || die "$gradle says $name ($code), set versionName \"$v\" and versionCode $want and commit first"
+    log=fastlane/metadata/android/en-US/changelogs/$want.txt
+    [[ -s $log ]] || die "no $log, f-droid shows it as what's new"
+    (( $(wc -m < "$log") <= 500 )) || die "$log is over 500 characters"
+fi
+
 # ci checks these too, failing here is cheaper than failing there
 git verify-commit HEAD 2> /dev/null || die "HEAD isn't signed"
 git -C ktjiit verify-commit HEAD 2> /dev/null || die "the pinned ktjiit commit isn't signed"
