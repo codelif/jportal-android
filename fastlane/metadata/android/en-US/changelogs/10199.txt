@@ -1,3 +1,3 @@
-Checking GitHub for updates is now opt-in. It stays off unless you turn it on under Settings.
+Reproducable builds for F-droid
 
-This is also the first version built to be published on F-Droid.
+no functionality change
