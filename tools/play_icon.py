@@ -1,5 +1,5 @@
 """play store icon: the adaptive launcher icon flattened to a 512px square, play masks it itself.
-usage: python tools/play_icon.py store/icon-512.png (needs rsvg-convert)"""
+usage: python tools/play_icon.py fastlane/metadata/android/en-US/images/icon.png (needs rsvg-convert)"""
 import re, subprocess, sys
 import xml.etree.ElementTree as ET
 

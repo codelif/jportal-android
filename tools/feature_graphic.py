@@ -1,5 +1,5 @@
 """play store feature graphic: the launcher frog next to the name, 1024x500.
-usage: python tools/feature_graphic.py store/feature-1024x500.png (needs rsvg-convert and pillow)"""
+usage: python tools/feature_graphic.py fastlane/metadata/android/en-US/images/featureGraphic.png (needs rsvg-convert and pillow)"""
 import io, subprocess, sys
 
 from PIL import Image, ImageDraw, ImageFont

@@ -1,1 +1,0 @@
-Unofficial app for the JIIT webportal: attendance, marks, grades and exams.
