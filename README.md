@@ -6,20 +6,28 @@ Unofficial. Not affiliated with or endorsed by JIIT.
 
 ## What's in it
 
-- **Attendance** is the home screen. Every subject gets a ring with exact counts from the class-by-class list (not the portal's day-old percentage) and tells you how many classes you can miss, or how many you need to attend. Tap a subject for its calendar, trend, L/T/P split, faculty, credits and marks.
-- **Exams**: the next paper with a live countdown, then the rest of the schedule with rooms and seats.
-- **Grades**: SGPA and CGPA over time. Drag future semesters around to see where your CGPA lands. Also grade cards, and marks for every exam event, parsed straight from the portal's PDF.
-- **Me**: profile, fees, hostel, bank details (hidden until you tap) and feedback.
-- Works offline. Everything is cached on the phone, and every screen says how old its data is.
-- Material 3, dynamic color from your wallpaper (or JPortal blue), pure black mode, and predictive back.
+<p align="center">
+  <img src="app/src/test/screenshots/attendance_light.png" width="200">
+  <img src="app/src/test/screenshots/subject_light.png" width="200">
+  <img src="app/src/test/screenshots/academics_dark.png" width="200">
+  <img src="app/src/test/screenshots/exams_dark.png" width="200">
+</p>
+
+- attendance, counted class by class
+- how many classes you can skip, or need to attend (the actual reason you are here)
+- exam schedule with rooms, seats and a countdown (nobody asked for the countdown)
+- SGPA, CGPA, grade cards and marks (viewer discretion advised)
+- a CGPA what-if for the semesters to come (hope is free)
+- works offline (unlike the portal, which barely works online)
 
 ## Install
 
+[<img src="https://raw.githubusercontent.com/ImranR98/Obtainium/main/assets/graphics/badge_obtainium.png" alt="Get it on Obtainium" height="80">](https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/codelif/jportal-android)
+[<img src="https://raw.githubusercontent.com/Kunzisoft/Github-badge/main/get-it-on-github.png" alt="Get it on GitHub" height="80">](https://github.com/codelif/jportal-android/releases/latest)
+
+Every release is built by CI from a signed tag, and the APK ships with a SHA-256 checksum.
+
 **F-Droid**: coming.
-
-**Obtainium**: add `https://github.com/codelif/jportal-android` as an app source.
-
-**GitHub Releases**: download the APK from the latest release. Every release is built by CI from a signed tag, and the APK ships with a SHA-256 checksum.
 
 **Play Store**: coming.
 
