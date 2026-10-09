@@ -55,6 +55,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
+import `in`.codelif.jportal.BuildConfig
 import `in`.codelif.jportal.LocalGraph
 import `in`.codelif.jportal.R
 import `in`.codelif.jportal.data.AppIcon
@@ -91,6 +92,7 @@ fun SettingsScreen() {
     val amoled by prefs.amoledState.collectAsState()
     val target by prefs.targetState.collectAsState()
     val icon by prefs.iconState.collectAsState()
+    val updateCheck by prefs.updateCheckState.collectAsState()
     var editTarget by remember { mutableStateOf(false) }
     var confirmOut by remember { mutableStateOf(false) }
 
@@ -125,6 +127,20 @@ fun SettingsScreen() {
         item("att") { Group { row { Entry(R.drawable.ic_flag, "Attendance goal", "$target%") { editTarget = true } } } }
         item("exam-h") { SectionHeader("Exams") }
         item("exam") { ExamSyncGroup() }
+        // the play build can't check at all, its store does the updating
+        if (BuildConfig.UPDATE_CHECK) {
+            item("upd-h") { SectionHeader("Updates") }
+            item("upd") {
+                Group {
+                    row {
+                        Toggle("Check for updates", "Asks GitHub once a day if there's a newer version", updateCheck) {
+                            prefs.setUpdateCheck(it)
+                            graph.updates.check()
+                        }
+                    }
+                }
+            }
+        }
         item("acc-h") { SectionHeader("Account") }
         item("acc") {
             Group(Modifier.padding(bottom = 16.dp)) {

@@ -25,7 +25,7 @@ class AppGraph(context: Context, demo: Boolean = BuildConfig.DEMO) {
     val sessions = SessionManager(SessionStore(context), transport, if (demo) Demo.session else null)
     val cache = Cache(context)
     val repo = Repository(cache, sessions, scope) { !this.demo }
-    val updates = Updates(context, scope)
+    val updates = Updates(context, scope, prefs)
     val calendar = CalendarSync(context, prefs, repo, scope)
 
     /** the made up student is signed in, nothing may touch the portal */

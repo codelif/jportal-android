@@ -2,7 +2,7 @@
 
 JPortal for Android is an unofficial app for the JIIT webportal, made by Harsh Sharma. It isn't affiliated with or endorsed by JIIT.
 
-Last updated: 24 September 2026
+Last updated: 9 October 2026
 
 ## What the app handles
 
@@ -12,7 +12,7 @@ You sign in with your JIIT Google account. Everything the app then shows comes f
 
 - **The JIIT webportal** (webportal.jiit.ac.in). Every request goes there, to read your data and, only when you submit feedback, to send your ratings. What JIIT does with it is covered by JIIT's own policies.
 - **Google** (accounts.google.com), for the sign-in itself.
-- **GitHub** (api.github.com), only in the build downloaded from GitHub, never the Play Store one. Once a day the app asks GitHub whether a newer version exists. That request carries nothing about you beyond what any web request does: your IP address and the app's version.
+- **GitHub** (api.github.com), only if you turn on "Check for updates" in settings. It is off by default, and the Play Store build doesn't have it at all. While it is on, once a day the app asks GitHub whether a newer version exists. That request carries nothing about you beyond what any web request does: your IP address and the app's version.
 
 Nothing is sent to the developer. The app has no analytics, no ads, no crash reporting and no tracking of any kind.
 

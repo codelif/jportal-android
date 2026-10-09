@@ -37,24 +37,30 @@ fun isNewer(candidate: String, installed: String): Boolean {
 }
 
 /**
- * github builds only: at most one look at the releases page a day, and
- * never a word about it failing.
+ * github builds only, and only once it's switched on in settings: at most
+ * one look at the releases page a day, and never a word about it failing.
  */
-class Updates(context: Context, private val scope: CoroutineScope) {
+class Updates(context: Context, private val scope: CoroutineScope, private val prefs: Prefs) {
     private val sp = context.getSharedPreferences("updates", Context.MODE_PRIVATE)
     private val latest = MutableStateFlow(stored())
 
     /** only ever a release newer than what's installed, so updating clears it */
     val available: StateFlow<Release?> = latest.asStateFlow()
 
+    /** the build has to carry the check and the user has to have asked for it */
+    private fun on() = BuildConfig.UPDATE_CHECK && prefs.updateCheckState.value
+
     private fun stored(): Release? {
+        if (!on()) return null
         val v = sp.getString("version", null) ?: return null
         val url = sp.getString("url", null) ?: return null
         return Release(v, url).takeIf { isNewer(v, BuildConfig.VERSION_NAME) }
     }
 
+    /** on launch, and again whenever the setting flips, so switching it off takes the notice away at once */
     fun check() {
-        if (!BuildConfig.UPDATE_CHECK) return
+        latest.value = stored()
+        if (!on()) return
         val now = System.currentTimeMillis()
         if (now - sp.getLong("checked", 0) < DAY) return
         // debug builds can point at any repo with releases, to see the ui without shipping one

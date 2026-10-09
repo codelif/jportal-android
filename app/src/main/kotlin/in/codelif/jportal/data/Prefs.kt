@@ -40,6 +40,7 @@ class Prefs(context: Context) {
     private val calSync = Pref("cal_sync", false, { k, d -> sp.getBoolean(k, d) }, { k, v -> putBoolean(k, v) })
     private val calendar = Pref<Long?>("cal_id", null, { k, _ -> sp.getLong(k, -1).takeIf { it >= 0 } }, { k, v -> if (v == null) remove(k) else putLong(k, v) })
     private val calDenied = Pref("cal_denied", false, { k, d -> sp.getBoolean(k, d) }, { k, v -> putBoolean(k, v) })
+    private val updateCheck = Pref("update_check", false, { k, d -> sp.getBoolean(k, d) }, { k, v -> putBoolean(k, v) })
 
     val themeModeState get() = themeMode.state
     val paletteState get() = palette.state
@@ -57,6 +58,8 @@ class Prefs(context: Context) {
     val calendarState get() = calendar.state
     /** sync flipped off because calendar access went away */
     val calendarDeniedState get() = calDenied.state
+    /** asking github for a newer version, off until someone turns it on */
+    val updateCheckState get() = updateCheck.state
 
     fun setThemeMode(v: ThemeMode) = themeMode.set(v)
     fun setPalette(v: Palette) = palette.set(v)
@@ -69,6 +72,7 @@ class Prefs(context: Context) {
     fun setCalendarSync(v: Boolean) = calSync.set(v)
     fun setCalendar(id: Long?) = calendar.set(id)
     fun setCalendarDenied(v: Boolean) = calDenied.set(v)
+    fun setUpdateCheck(v: Boolean) = updateCheck.set(v)
 
     fun clearAccountBits() {
         semester.set(null)
