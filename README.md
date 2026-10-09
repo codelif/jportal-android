@@ -15,9 +15,9 @@ Unofficial. Not affiliated with or endorsed by JIIT.
 
 ## Install
 
-**F-Droid**: coming. F-Droid rebuilds every release from source and only ships it when the result is identical to the APK published here, so it carries the same signature and installs over a GitHub or Obtainium copy.
+**F-Droid**: coming.
 
-**Obtainium** (auto-updates from GitHub releases): add `https://github.com/codelif/jportal-android` as an app source.
+**Obtainium**: add `https://github.com/codelif/jportal-android` as an app source.
 
 **GitHub Releases**: download the APK from the latest release. Every release is built by CI from a signed tag, and the APK ships with a SHA-256 checksum.
 
@@ -36,16 +36,6 @@ cd jportal-android
 The portal client is [ktjiit](https://github.com/codelif/ktjiit), pulled in as a submodule and an included build.
 
 There are two flavors: `github` (can check GitHub for updates, once that is switched on in settings) and `play` (can't). F-Droid ships the `github` one.
-
-### Tests and benchmarks
-
-- `./gradlew :app:testGithubDebugUnitTest` runs the unit tests and checks every main screen against the pictures in `app/src/test/screenshots` (light, dark and twice the font size). After a deliberate UI change, record new ones with `./gradlew :app:recordRoborazziGithubDebug` and look at the diff.
-- `./gradlew :app:checkGithubReleaseApkSize` fails when the release APK outgrows its budget. It also runs after every release build.
-- The `baselineprofile` module holds the startup and frame time benchmarks and the baseline profile generator. They drive a made-up student under their own package (`in.codelif.jportal.android.bench`), so no sign in is needed and a phone's real install is left alone. Point `ANDROID_SERIAL` at an emulator or a phone, then run `./gradlew :app:generateBaselineProfile` for a new profile, or `./gradlew :baselineprofile:connectedGithubBenchmarkReleaseAndroidTest` for numbers. Add `-Pandroid.testInstrumentationRunnerArguments.compilation=none` to see a fresh sideload before Android compiles it, and `-Pandroid.testInstrumentationRunnerArguments.androidx.benchmark.fullTracing.enable=true` for composable names in the traces.
-
-### Releasing
-
-`tools/release.sh 0.2.0` checks the tree, takes the notes (from `release-notes.md`, or your editor when that is missing or empty), writes the new `versionCode` and `versionName` into `app/build.gradle.kts` and the notes into `fastlane/metadata/android/en-US/changelogs/<versionCode>.txt`, commits both as `chore(release): v0.2.0`, makes a signed `v0.2.0` tag on that commit and stops. The notes are used as written, with heading marks dropped for the stores, and can't be longer than 500 characters. Pushing the tag starts the release workflow, which refuses any tag, commit or pinned ktjiit commit not signed by the key in `.github/tag-signer.asc`, then builds, signs and publishes the APK with its checksum. A tag with a dash, like `v0.2.0-rc1`, becomes a prerelease that the app's update check and F-Droid both skip. It gets the tag and nothing else, its version comes from the tag.
 
 ## Privacy
 
