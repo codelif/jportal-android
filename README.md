@@ -28,7 +28,7 @@ Unofficial. Not affiliated with or endorsed by JIIT.
 
 Every release is built by CI from a signed tag, and the APK ships with a SHA-256 checksum.
 
-**F-Droid**: coming.
+**F-Droid**: [coming](https://gitlab.com/fdroid/fdroiddata/-/merge_requests/51871).
 
 ## Building
 
