@@ -9,6 +9,7 @@ sealed interface Route {
     val key: String
 
     sealed interface Tab : Route
+    data object Schedule : Tab { override val key = "schedule" }
     data object Attendance : Tab { override val key = "attendance" }
     data object Academics : Tab { override val key = "academics" }
     data object Subjects : Tab { override val key = "subjects" }
@@ -31,18 +32,18 @@ sealed interface Route {
     data object About : Route { override val key = "about" }
 
     companion object {
-        val tabs: List<Tab> = listOf(Attendance, Academics, Subjects, Me)
+        val tabs: List<Tab> = listOf(Schedule, Attendance, Academics, Subjects, Me)
     }
 }
 
 /** a plain back stack. no navigation library, the whole thing is this list */
 @Stable
-class Navigator(start: Route.Tab = Route.Attendance) {
+class Navigator(start: Route.Tab = Route.Schedule) {
     val stack: SnapshotStateList<Route> = mutableStateListOf(start)
 
     val current: Route get() = stack.last()
     val tab: Route.Tab get() = stack.first() as Route.Tab
-    val canPop: Boolean get() = stack.size > 1 || tab != Route.Attendance
+    val canPop: Boolean get() = stack.size > 1 || tab != Route.Schedule
 
     fun push(route: Route) {
         if (current != route) stack.add(route)
@@ -51,7 +52,7 @@ class Navigator(start: Route.Tab = Route.Attendance) {
     /** back from a tab root goes home first, like every well behaved android app */
     fun pop(): Boolean = when {
         stack.size > 1 -> { stack.removeAt(stack.lastIndex); true }
-        tab != Route.Attendance -> { stack[0] = Route.Attendance; true }
+        tab != Route.Schedule -> { stack[0] = Route.Schedule; true }
         else -> false
     }
 

@@ -39,6 +39,7 @@ import androidx.compose.ui.unit.dp
 import `in`.codelif.jportal.LocalGraph
 import `in`.codelif.jportal.R
 import `in`.codelif.jportal.feature.attendance.AttendanceScreen
+import `in`.codelif.jportal.feature.schedule.ScheduleScreen
 import `in`.codelif.jportal.feature.feedback.FeedbackScreen
 import `in`.codelif.jportal.feature.academics.AcademicsScreen
 import `in`.codelif.jportal.feature.academics.GradeCardScreen
@@ -117,6 +118,7 @@ private fun SignedIn() {
 
 @Composable
 private fun Screen(route: Route) = when (route) {
+    Route.Schedule -> ScheduleScreen()
     Route.Attendance -> AttendanceScreen()
     Route.Academics -> AcademicsScreen()
     Route.Subjects -> SubjectsScreen()
@@ -138,6 +140,7 @@ private fun Screen(route: Route) = when (route) {
 private data class TabSpec(val tab: Route.Tab, val label: String, val icon: Int, val selectedIcon: Int)
 
 private val tabs = listOf(
+    TabSpec(Route.Schedule, "Schedule", R.drawable.ic_schedule, R.drawable.ic_schedule_filled),
     TabSpec(Route.Attendance, "Attendance", R.drawable.ic_fact_check, R.drawable.ic_fact_check_filled),
     TabSpec(Route.Academics, "Academics", R.drawable.ic_school, R.drawable.ic_school_filled),
     TabSpec(Route.Subjects, "Subjects", R.drawable.ic_menu_book, R.drawable.ic_menu_book_filled),
