@@ -1,0 +1,20 @@
+default_platform(:android)
+
+platform :android do
+  # credentials come from the environment, release.yml's keyless login puts them there
+  desc "the play bundle to production, with the changelog, listing and graphics from fastlane/metadata"
+  lane :play do
+    upload_to_play_store(
+      package_name: "in.codelif.jportal.android",
+      track: "production",
+      release_status: "completed",
+      version_name: ENV.fetch("GITHUB_REF_NAME"),
+      aab: "app/build/outputs/bundle/playRelease/app-play-release.aab",
+      mapping: "app/build/outputs/mapping/playRelease/mapping.txt",
+      metadata_path: "fastlane/metadata/android",
+      skip_upload_apk: true,
+      # only images whose hash changed go up, the rest stay as play has them
+      sync_image_upload: true,
+    )
+  end
+end

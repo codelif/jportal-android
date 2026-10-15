@@ -6,6 +6,8 @@ on:
 
 permissions:
   contents: write
+  # the keyless play login, gcp only trusts release.yml on a v* tag of this repo
+  id-token: write
 
 jobs:
   release:
@@ -66,11 +68,8 @@ jobs:
           # a dash means a prerelease, which the in-app update check skips
           case "$tag" in *-*) pre=--prerelease ;; *) pre= ;; esac
           gh release create "$tag" "$apk" "$apk.sha256" --title "$tag" --notes-file notes.md --verify-tag $pre
-          # play shows plain text, 500 characters at most
-          mkdir whatsnew
-          sed -E 's/^#+ *//' notes.md | head -c 500 > whatsnew/whatsnew-en-US
 
-      # play's api can't take an app's very first upload, that one goes up by hand from here
+      # a manual fallback for when play's api has a bad day
       - uses: actions/upload-artifact@v7
         with:
           name: play-${{ github.ref_name }}
@@ -78,21 +77,15 @@ jobs:
             app/build/outputs/bundle/playRelease/app-play-release.aab
             app/build/outputs/mapping/playRelease/mapping.txt
 
-      # skipped until the service account exists
-      - id: play
-        env:
-          JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
-        run: if [ -n "$JSON" ]; then echo ready=true >> "$GITHUB_OUTPUT"; fi
-
-      # test tags go to closed testing, the rest to production review
-      - if: steps.play.outputs.ready == 'true'
-        uses: r0adkll/upload-google-play@v1
+      # test tags stop at github, the rest go to play production
+      - if: ${{ !contains(github.ref_name, '-') }}
+        uses: google-github-actions/auth@v3
         with:
-          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
-          packageName: in.codelif.jportal.android
-          releaseFiles: app/build/outputs/bundle/playRelease/app-play-release.aab
-          mappingFile: app/build/outputs/mapping/playRelease/mapping.txt
-          whatsNewDirectory: whatsnew
-          releaseName: ${{ github.ref_name }}
-          track: ${{ contains(github.ref_name, '-') && 'alpha' || 'production' }}
-          status: completed
+          workload_identity_provider: projects/1088721964906/locations/global/workloadIdentityPools/github/providers/jportal-android
+          service_account: play-publisher@jportal-release.iam.gserviceaccount.com
+      - if: ${{ !contains(github.ref_name, '-') }}
+        uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+      - if: ${{ !contains(github.ref_name, '-') }}
+        run: bundle exec fastlane android play
