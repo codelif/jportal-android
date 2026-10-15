@@ -133,7 +133,7 @@ fun ScheduleScreen() {
     }
 
     ScreenScaffold(
-        title = "Schedule",
+        title = "Planner",
         subtitle = scheduleData?.let { "${it.campusDisplayName} · Batch ${it.batch}" },
         bottomPadding = LocalBottomInset.current,
         actions = {
@@ -162,7 +162,13 @@ fun ScheduleScreen() {
         },
     ) {
         if (scheduleData == null) {
-            item("loading") { CenteredLoading() }
+            item("empty") {
+                MessageState(
+                    frog = Frog.Sleep,
+                    title = "No schedule found",
+                    body = "Add schedule.json to view your timetable.",
+                )
+            }
         } else {
             // Top Hero Card (Current class progress / Next class / Day ended)
             item("hero") {

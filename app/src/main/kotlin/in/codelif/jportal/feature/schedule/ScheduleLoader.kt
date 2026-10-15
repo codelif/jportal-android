@@ -1,5 +1,6 @@
 package `in`.codelif.jportal.feature.schedule
 
+import androidx.annotation.VisibleForTesting
 import android.content.Context
 import `in`.codelif.ktjiit.auth.Session
 import `in`.codelif.ktjiit.model.PersonalInfo
@@ -33,10 +34,15 @@ object ScheduleLoader {
     @Volatile
     private var cachedRoot: JsonObject? = null
 
-    private suspend fun getRoot(context: Context): JsonObject = cachedRoot ?: withContext(Dispatchers.IO) {
-        val root = context.assets.open("schedule.json").bufferedReader().use { reader ->
-            json.parseToJsonElement(reader.readText()).jsonObject
-        }
+    @VisibleForTesting
+    internal var testRoot: JsonObject? = null
+
+    private suspend fun getRoot(context: Context): JsonObject = testRoot ?: cachedRoot ?: withContext(Dispatchers.IO) {
+        val root = runCatching {
+            context.assets.open("schedule.json").bufferedReader().use { reader ->
+                json.parseToJsonElement(reader.readText()).jsonObject
+            }
+        }.getOrElse { JsonObject(emptyMap()) }
         cachedRoot = root
         root
     }

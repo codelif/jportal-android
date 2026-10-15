@@ -118,9 +118,9 @@ private fun SignedIn() {
 
 @Composable
 private fun Screen(route: Route) = when (route) {
-    Route.Schedule -> ScheduleScreen()
     Route.Attendance -> AttendanceScreen()
     Route.Academics -> AcademicsScreen()
+    Route.Planner -> ScheduleScreen()
     Route.Subjects -> SubjectsScreen()
     Route.Me -> MeScreen()
     is Route.Subject -> SubjectScreen(route)
@@ -140,9 +140,9 @@ private fun Screen(route: Route) = when (route) {
 private data class TabSpec(val tab: Route.Tab, val label: String, val icon: Int, val selectedIcon: Int)
 
 private val tabs = listOf(
-    TabSpec(Route.Schedule, "Schedule", R.drawable.ic_schedule, R.drawable.ic_schedule_filled),
     TabSpec(Route.Attendance, "Attendance", R.drawable.ic_fact_check, R.drawable.ic_fact_check_filled),
     TabSpec(Route.Academics, "Academics", R.drawable.ic_school, R.drawable.ic_school_filled),
+    TabSpec(Route.Planner, "Planner", R.drawable.ic_schedule, R.drawable.ic_schedule_filled),
     TabSpec(Route.Subjects, "Subjects", R.drawable.ic_menu_book, R.drawable.ic_menu_book_filled),
     TabSpec(Route.Me, "Me", R.drawable.ic_person, R.drawable.ic_person_filled),
 )

@@ -5,9 +5,13 @@ import androidx.test.core.app.ApplicationProvider
 import `in`.codelif.ktjiit.auth.Session
 import `in`.codelif.ktjiit.model.GeneralInfo
 import `in`.codelif.ktjiit.model.PersonalInfo
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -18,6 +22,51 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
 class ScheduleLoaderTest {
+
+    private val sampleJson = """
+        {
+          "btech-128_sem3_phase1_f7": {
+            "classes": {
+              "Monday": [
+                {
+                  "day": "Monday",
+                  "subject": "Unix Programming Lab",
+                  "subject_code": "15B17CI371",
+                  "start": "09:00 AM",
+                  "end": "10:50 AM",
+                  "venue": "CL01",
+                  "type": "Practical"
+                }
+              ]
+            }
+          },
+          "btech-62_sem1_phase1_b3": {
+            "classes": {
+              "Monday": [
+                {
+                  "day": "Monday",
+                  "subject": "Physics",
+                  "subject_code": "15B11PH111",
+                  "start": "09:00 AM",
+                  "end": "09:50 AM",
+                  "venue": "LT1",
+                  "type": "Lecture"
+                }
+              ]
+            }
+          }
+        }
+    """.trimIndent()
+
+    @Before
+    fun setUp() {
+        ScheduleLoader.testRoot = Json.parseToJsonElement(sampleJson).jsonObject
+    }
+
+    @After
+    fun tearDown() {
+        ScheduleLoader.testRoot = null
+    }
 
     @Test
     fun testCampusDetection() {

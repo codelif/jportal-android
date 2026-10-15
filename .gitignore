@@ -11,3 +11,4 @@ captures/
 local-fixtures/
 release-notes.md
 __pycache__/
+app/src/main/assets/schedule.json
