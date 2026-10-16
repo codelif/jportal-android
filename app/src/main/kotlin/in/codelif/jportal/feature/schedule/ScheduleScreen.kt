@@ -1,0 +1,1337 @@
+package `in`.codelif.jportal.feature.schedule
+
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import `in`.codelif.jportal.LocalGraph
+import `in`.codelif.jportal.R
+import `in`.codelif.jportal.data.AppClock
+import `in`.codelif.jportal.session.AuthState
+import `in`.codelif.jportal.ui.LocalBottomInset
+import `in`.codelif.jportal.ui.components.CenteredLoading
+import `in`.codelif.jportal.ui.components.Frog
+import `in`.codelif.jportal.ui.components.Ic
+import `in`.codelif.jportal.ui.components.MessageState
+import `in`.codelif.jportal.ui.components.ScreenScaffold
+import `in`.codelif.jportal.ui.theme.LocalExtraColors
+import kotlinx.coroutines.delay
+import java.time.DayOfWeek
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
+import java.util.Locale
+
+sealed interface ScheduleTimelineItem {
+    data class ClassSlot(val item: ClassItem) : ScheduleTimelineItem
+    data class LunchBreakSlot(val start: LocalTime, val end: LocalTime, val durationMinutes: Long) : ScheduleTimelineItem
+    data class BreakSlot(val start: LocalTime, val end: LocalTime, val durationMinutes: Long) : ScheduleTimelineItem
+}
+
+@Composable
+fun ScheduleScreen() {
+    val graph = LocalGraph.current
+    val context = LocalContext.current
+    val auth by graph.sessions.state.collectAsState()
+    val session = (auth as? AuthState.SignedIn)?.session
+    val personal by graph.repo.personal.state.collectAsState()
+
+    var campusOverride by remember { mutableStateOf<String?>(null) }
+    var batchOverride by remember { mutableStateOf<String?>(null) }
+    var showPicker by remember { mutableStateOf(false) }
+    var selectedClassDetail by remember { mutableStateOf<ClassItem?>(null) }
+
+    // Live clock ticker every 10 seconds to keep progress bar and countdown fresh
+    val nowTime by produceState(initialValue = AppClock.now().toLocalTime()) {
+        while (true) {
+            value = AppClock.now().toLocalTime()
+            delay(10_000)
+        }
+    }
+
+    val scheduleData by produceState<LoadedSchedule?>(initialValue = null, campusOverride, batchOverride, personal.data) {
+        value = ScheduleLoader.loadSchedule(
+            context = context,
+            session = session,
+            personal = personal.data,
+            campusOverride = campusOverride,
+            batchOverride = batchOverride,
+        )
+    }
+
+    val today = remember { AppClock.today().dayOfWeek }
+    val todayName = remember(today) { ScheduleLoader.dayDisplayName(today) }
+
+    var selectedDay by remember(scheduleData) {
+        val days = scheduleData?.availableDays.orEmpty()
+        mutableStateOf(if (days.contains(todayName)) todayName else days.firstOrNull() ?: "Monday")
+    }
+
+    val currentDayClasses = remember(scheduleData, selectedDay) {
+        scheduleData?.classesByDay?.get(selectedDay).orEmpty()
+    }
+
+    val timelineItems = remember(currentDayClasses) {
+        buildTimeline(currentDayClasses)
+    }
+
+    val todayClasses = remember(scheduleData, todayName) {
+        scheduleData?.classesByDay?.get(todayName).orEmpty()
+    }
+
+    // Determine current class status for today
+    val currentStatus = remember(todayClasses, nowTime) {
+        computeClassStatus(todayClasses, nowTime, today)
+    }
+
+    ScreenScaffold(
+        title = "Planner",
+        subtitle = scheduleData?.let { "${it.campusDisplayName} · Batch ${it.batch}" },
+        bottomPadding = LocalBottomInset.current,
+        actions = {
+            if (scheduleData != null) {
+                Surface(
+                    onClick = { showPicker = true },
+                    shape = MaterialTheme.shapes.small,
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    modifier = Modifier.padding(end = 12.dp),
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        Text(
+                            scheduleData?.batch ?: "Batch",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                        Ic(R.drawable.ic_expand_more, null, Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
+                    }
+                }
+            }
+        },
+    ) {
+        if (scheduleData == null) {
+            item("empty") {
+                MessageState(
+                    frog = Frog.Sleep,
+                    title = "No schedule found",
+                    body = "Add schedule.json to view your timetable.",
+                )
+            }
+        } else {
+            // Top Hero Card (Current class progress / Next class / Day ended)
+            item("hero") {
+                HeroClassCard(
+                    status = currentStatus,
+                    todayName = todayName,
+                    isViewingToday = selectedDay == todayName,
+                    onClassClick = { selectedClassDetail = it },
+                )
+            }
+
+            // Day Selector Chips
+            item("day_chips") {
+                DaySelector(
+                    availableDays = scheduleData?.availableDays.orEmpty(),
+                    selectedDay = selectedDay,
+                    todayName = todayName,
+                    onSelectDay = { selectedDay = it },
+                )
+            }
+
+            // Schedule timeline for selected day
+            if (currentDayClasses.isEmpty()) {
+                item("empty_day") {
+                    MessageState(
+                        frog = Frog.Sleep,
+                        title = "No classes on $selectedDay",
+                        body = "Take a break and recharge!",
+                    )
+                }
+            } else {
+                items(timelineItems, key = { item ->
+                    when (item) {
+                        is ScheduleTimelineItem.ClassSlot -> "class_${item.item.day}_${item.item.start}_${item.item.subjectCode}_${item.item.venue}"
+                        is ScheduleTimelineItem.LunchBreakSlot -> "lunch_${item.start}_${item.end}"
+                        is ScheduleTimelineItem.BreakSlot -> "break_${item.start}_${item.end}"
+                    }
+                }) { item ->
+                    when (item) {
+                        is ScheduleTimelineItem.ClassSlot -> {
+                            ClassCard(
+                                item = item.item,
+                                isToday = selectedDay == todayName,
+                                nowTime = nowTime,
+                                onClick = { selectedClassDetail = item.item },
+                            )
+                        }
+                        is ScheduleTimelineItem.LunchBreakSlot -> {
+                            LunchBreakCard(item)
+                        }
+                        is ScheduleTimelineItem.BreakSlot -> {
+                            BreakDivider(item)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if (showPicker && scheduleData != null) {
+        CampusBatchPickerSheet(
+            currentCampus = scheduleData!!.campus,
+            currentBatch = scheduleData!!.batch,
+            onDismiss = { showPicker = false },
+            onSelect = { campus, batch ->
+                campusOverride = campus
+                batchOverride = batch
+                showPicker = false
+            },
+        )
+    }
+
+    if (selectedClassDetail != null && scheduleData != null) {
+        ClassDetailSheet(
+            item = selectedClassDetail!!,
+            currentBatch = scheduleData!!.batch,
+            onDismiss = { selectedClassDetail = null },
+        )
+    }
+}
+
+private enum class DesignatedLunchSlot {
+    SLOT_12_TO_1,
+    SLOT_1_TO_2,
+    NONE,
+}
+
+/** Builds a list of timeline items interleaving classes with breaks and lunch break */
+internal fun buildTimeline(classes: List<ClassItem>): List<ScheduleTimelineItem> {
+    if (classes.isEmpty()) return emptyList()
+    val result = mutableListOf<ScheduleTimelineItem>()
+    val noon = LocalTime.of(12, 0)
+    val onePm = LocalTime.of(13, 0)
+    val twoPm = LocalTime.of(14, 0)
+    val lunch12to1StartTarget = LocalTime.of(11, 50)
+    val lunch1to2StartTarget = LocalTime.of(12, 50)
+
+    // Check whether the batch has classes occupying 12-1 or 1-2
+    val hasClassIn12to1 = classes.any { c ->
+        val s = c.startTime
+        val e = c.endTime
+        s != null && e != null && s.isBefore(onePm) && e.isAfter(noon)
+    }
+
+    val hasClassIn1to2 = classes.any { c ->
+        val s = c.startTime
+        val e = c.endTime
+        s != null && e != null && s.isBefore(twoPm) && e.isAfter(onePm)
+    }
+
+    // "if the slot for a batch is free from 12-1, then that would be lunch break,
+    // otherwise if free from 1-2, then that would be lunch break otherwise no lunch break"
+    val designatedLunch = when {
+        !hasClassIn12to1 -> DesignatedLunchSlot.SLOT_12_TO_1
+        !hasClassIn1to2 -> DesignatedLunchSlot.SLOT_1_TO_2
+        else -> DesignatedLunchSlot.NONE
+    }
+
+    for (i in classes.indices) {
+        val current = classes[i]
+        result.add(ScheduleTimelineItem.ClassSlot(current))
+
+        if (i < classes.lastIndex) {
+            val next = classes[i + 1]
+            val currentEnd = current.endTime
+            val nextStart = next.startTime
+            if (currentEnd != null && nextStart != null && nextStart.isAfter(currentEnd)) {
+                val duration = ChronoUnit.MINUTES.between(currentEnd, nextStart)
+                if (duration > 0) {
+                    when {
+                        designatedLunch == DesignatedLunchSlot.SLOT_12_TO_1 &&
+                            currentEnd.isBefore(onePm) && !nextStart.isBefore(onePm) -> {
+                            val lunchStart = if (currentEnd.isBefore(lunch12to1StartTarget)) lunch12to1StartTarget else currentEnd
+                            val lunchEnd = onePm
+
+                            // Free time before lunchStart (>= 30 mins) -> regular break
+                            if (currentEnd.isBefore(lunchStart)) {
+                                val preDuration = ChronoUnit.MINUTES.between(currentEnd, lunchStart)
+                                if (preDuration >= 30) {
+                                    result.add(ScheduleTimelineItem.BreakSlot(currentEnd, lunchStart, preDuration))
+                                }
+                            }
+
+                            // Lunch Break card
+                            val lunchDuration = ChronoUnit.MINUTES.between(lunchStart, lunchEnd)
+                            if (lunchDuration >= 30) {
+                                result.add(ScheduleTimelineItem.LunchBreakSlot(lunchStart, lunchEnd, lunchDuration))
+                            }
+
+                            // Free time after lunchEnd (>= 30 mins) -> regular break
+                            if (nextStart.isAfter(lunchEnd)) {
+                                val postDuration = ChronoUnit.MINUTES.between(lunchEnd, nextStart)
+                                if (postDuration >= 30) {
+                                    result.add(ScheduleTimelineItem.BreakSlot(lunchEnd, nextStart, postDuration))
+                                }
+                            }
+                        }
+
+                        designatedLunch == DesignatedLunchSlot.SLOT_1_TO_2 &&
+                            currentEnd.isBefore(twoPm) && !nextStart.isBefore(twoPm) -> {
+                            val lunchStart = if (currentEnd.isBefore(lunch1to2StartTarget)) lunch1to2StartTarget else currentEnd
+                            val lunchEnd = twoPm
+
+                            // Free time before lunchStart (>= 30 mins) -> regular break
+                            if (currentEnd.isBefore(lunchStart)) {
+                                val preDuration = ChronoUnit.MINUTES.between(currentEnd, lunchStart)
+                                if (preDuration >= 30) {
+                                    result.add(ScheduleTimelineItem.BreakSlot(currentEnd, lunchStart, preDuration))
+                                }
+                            }
+
+                            // Lunch Break card
+                            val lunchDuration = ChronoUnit.MINUTES.between(lunchStart, lunchEnd)
+                            if (lunchDuration >= 30) {
+                                result.add(ScheduleTimelineItem.LunchBreakSlot(lunchStart, lunchEnd, lunchDuration))
+                            }
+
+                            // Free time after lunchEnd (>= 30 mins) -> regular break
+                            if (nextStart.isAfter(lunchEnd)) {
+                                val postDuration = ChronoUnit.MINUTES.between(lunchEnd, nextStart)
+                                if (postDuration >= 30) {
+                                    result.add(ScheduleTimelineItem.BreakSlot(lunchEnd, nextStart, postDuration))
+                                }
+                            }
+                        }
+
+                        duration >= 30 -> {
+                            result.add(ScheduleTimelineItem.BreakSlot(currentEnd, nextStart, duration))
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return result
+}
+
+fun formatBreakDuration(minutes: Long): String {
+    val h = minutes / 60
+    val m = minutes % 60
+    return when {
+        h > 0 && m > 0 -> "${h}h ${m}m"
+        h > 0 -> "${h}h"
+        else -> "${m}m"
+    }
+}
+
+/** Computes the real-time class progress and status for today */
+private fun computeClassStatus(
+    classes: List<ClassItem>,
+    nowTime: LocalTime,
+    dayOfWeek: DayOfWeek,
+): ClassProgressStatus {
+    if (dayOfWeek == DayOfWeek.SUNDAY || classes.isEmpty()) {
+        return ClassProgressStatus.FreeDay(
+            if (dayOfWeek == DayOfWeek.SUNDAY) "Sunday · Enjoy your weekend!" else "No classes scheduled for today"
+        )
+    }
+
+    val ongoing = classes.firstOrNull { it.isOngoingAt(nowTime) }
+    if (ongoing != null) {
+        return ClassProgressStatus.Ongoing(
+            currentClass = ongoing,
+            progress = ongoing.progressAt(nowTime),
+            minutesRemaining = ongoing.minutesRemainingAt(nowTime),
+        )
+    }
+
+    val next = classes.firstOrNull { it.isUpcomingAt(nowTime) }
+    if (next != null) {
+        return ClassProgressStatus.Upcoming(
+            nextClass = next,
+            minutesUntil = next.minutesUntilAt(nowTime),
+        )
+    }
+
+    // All classes ended for today
+    if (classes.all { it.isFinishedAt(nowTime) }) {
+        return ClassProgressStatus.DayEnded
+    }
+
+    return ClassProgressStatus.FreeDay()
+}
+
+/** Top hero card displaying ongoing class progress, next class, or day ended */
+@Composable
+private fun HeroClassCard(
+    status: ClassProgressStatus,
+    todayName: String,
+    isViewingToday: Boolean,
+    onClassClick: (ClassItem) -> Unit,
+) {
+    val extra = LocalExtraColors.current
+
+    Surface(
+        shape = MaterialTheme.shapes.extraLarge,
+        color = MaterialTheme.colorScheme.primaryContainer,
+        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+    ) {
+        Column(
+            modifier = Modifier.padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            when (status) {
+                is ClassProgressStatus.Ongoing -> {
+                    val c = status.currentClass
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Surface(
+                            shape = CircleShape,
+                            color = extra.good,
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            ) {
+                                Box(
+                                    Modifier
+                                        .size(6.dp)
+                                        .background(Color.White, CircleShape)
+                                )
+                                Text(
+                                    "ONGOING CLASS",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White,
+                                )
+                            }
+                        }
+
+                        Text(
+                            "${status.minutesRemaining}m left",
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        )
+                    }
+
+                    Text(
+                        c.subject,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.clickable { onClassClick(c) },
+                    )
+
+                    // Details row: Type, Venue, Teacher
+                    ClassMetaRow(c)
+
+                    // Progress Bar
+                    Spacer(Modifier.height(2.dp))
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        LinearProgressIndicator(
+                            progress = { status.progress },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(8.dp)
+                                .clip(CircleShape),
+                            color = MaterialTheme.colorScheme.primary,
+                            trackColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.35f),
+                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                        ) {
+                            Text(
+                                c.start,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f),
+                            )
+                            Text(
+                                "${(status.progress * 100).toInt()}% completed",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f),
+                            )
+                            Text(
+                                c.end,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f),
+                            )
+                        }
+                    }
+                }
+
+                is ClassProgressStatus.Upcoming -> {
+                    val next = status.nextClass
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Surface(
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.tertiaryContainer,
+                        ) {
+                            Text(
+                                "NEXT CLASS",
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onTertiaryContainer,
+                            )
+                        }
+
+                        Surface(
+                            shape = MaterialTheme.shapes.small,
+                            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.45f),
+                        ) {
+                            Text(
+                                if (status.minutesUntil <= 60) "In ${status.minutesUntil} mins" else "At ${next.start}",
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            )
+                        }
+                    }
+
+                    Text(
+                        next.subject,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.clickable { onClassClick(next) },
+                    )
+
+                    ClassMetaRow(next)
+                }
+
+                is ClassProgressStatus.DayEnded -> {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    ) {
+                        Surface(
+                            shape = CircleShape,
+                            color = extra.goodContainer,
+                            modifier = Modifier.size(48.dp),
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Ic(R.drawable.ic_check_circle, null, Modifier.size(28.dp), tint = extra.good)
+                            }
+                        }
+                        Column {
+                            Text(
+                                "Day Ended",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                            )
+                            Text(
+                                "All classes finished for today. Relax!",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.85f),
+                            )
+                        }
+                    }
+                }
+
+                is ClassProgressStatus.FreeDay -> {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    ) {
+                        Surface(
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.35f),
+                            modifier = Modifier.size(48.dp),
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Ic(R.drawable.ic_celebration, null, Modifier.size(26.dp), tint = MaterialTheme.colorScheme.primary)
+                            }
+                        }
+                        Column {
+                            Text(
+                                "No Classes Today",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                            )
+                            Text(
+                                status.message,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.85f),
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** Meta row for venue, teacher, and type */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun ClassMetaRow(c: ClassItem) {
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        // Type Badge (LEC, LAB, TUT)
+        Surface(
+            shape = MaterialTheme.shapes.small,
+            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.35f),
+        ) {
+            Text(
+                c.typeDescription,
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.SemiBold,
+            )
+        }
+
+        // Time slot
+        Surface(
+            shape = MaterialTheme.shapes.small,
+            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.35f),
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Ic(R.drawable.ic_schedule, null, Modifier.size(13.dp))
+                Text(
+                    "${c.start} – ${c.end}",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Medium,
+                )
+            }
+        }
+
+        // Venue
+        if (c.venue.isNotBlank()) {
+            Surface(
+                shape = MaterialTheme.shapes.small,
+                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.35f),
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    Ic(R.drawable.ic_meeting_room, null, Modifier.size(13.dp))
+                    Text(
+                        c.venue,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Medium,
+                    )
+                }
+            }
+        }
+
+        // Teacher
+        if (c.teacher.isNotBlank()) {
+            Surface(
+                shape = MaterialTheme.shapes.small,
+                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.35f),
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    Ic(R.drawable.ic_person, null, Modifier.size(13.dp))
+                    Text(
+                        c.teacher,
+                        style = MaterialTheme.typography.labelSmall,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** Day selector chips */
+@Composable
+private fun DaySelector(
+    availableDays: List<String>,
+    selectedDay: String,
+    todayName: String,
+    onSelectDay: (String) -> Unit,
+) {
+    val haptics = LocalHapticFeedback.current
+
+    LazyRow(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        contentPadding = PaddingValues(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        items(availableDays) { day ->
+            val isSelected = day == selectedDay
+            val isToday = day == todayName
+
+            FilterChip(
+                selected = isSelected,
+                onClick = {
+                    if (!isSelected) {
+                        haptics.performHapticFeedback(HapticFeedbackType.SegmentTick)
+                        onSelectDay(day)
+                    }
+                },
+                label = {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        Text(
+                            day.take(3),
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                        )
+                        if (isToday) {
+                            Box(
+                                Modifier
+                                    .size(5.dp)
+                                    .background(
+                                        if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary,
+                                        CircleShape
+                                    )
+                            )
+                        }
+                    }
+                },
+                colors = FilterChipDefaults.filterChipColors(
+                    selectedContainerColor = MaterialTheme.colorScheme.primary,
+                    selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                ),
+            )
+        }
+    }
+}
+
+/** Individual class card for the daily timetable (without subject code) */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun ClassCard(
+    item: ClassItem,
+    isToday: Boolean,
+    nowTime: LocalTime,
+    onClick: () -> Unit,
+) {
+    val extra = LocalExtraColors.current
+    val isOngoing = isToday && item.isOngoingAt(nowTime)
+    val isPast = isToday && item.isFinishedAt(nowTime)
+
+    val cardColor by animateColorAsState(
+        targetValue = when {
+            isOngoing -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)
+            isPast -> MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.6f)
+            else -> MaterialTheme.colorScheme.surfaceContainerLow
+        },
+        animationSpec = tween(400),
+        label = "class_card_color",
+    )
+
+    Surface(
+        onClick = onClick,
+        shape = MaterialTheme.shapes.large,
+        color = cardColor,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 5.dp),
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.Top,
+        ) {
+            // Left Time Column
+            Column(
+                modifier = Modifier.width(72.dp),
+                horizontalAlignment = Alignment.Start,
+            ) {
+                Text(
+                    item.start,
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = if (isOngoing) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                )
+                Text(
+                    item.end,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+
+                Spacer(Modifier.height(8.dp))
+
+                // Type Pill (LEC, LAB, TUT)
+                val (pillColor, textColor) = when (item.type.uppercase()) {
+                    "P" -> extra.cgpa to Color.White
+                    "T" -> extra.warn to Color.Black
+                    else -> MaterialTheme.colorScheme.primary to MaterialTheme.colorScheme.onPrimary
+                }
+
+                Surface(
+                    shape = MaterialTheme.shapes.extraSmall,
+                    color = pillColor,
+                    modifier = Modifier.padding(top = 2.dp),
+                ) {
+                    Text(
+                        item.typeDescription,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = textColor,
+                    )
+                }
+            }
+
+            Spacer(Modifier.width(12.dp))
+
+            // Main Info Column (Subject code removed from card)
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        item.subject,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f),
+                        color = if (isPast) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f) else MaterialTheme.colorScheme.onSurface,
+                    )
+
+                    if (isOngoing) {
+                        Surface(
+                            shape = CircleShape,
+                            color = extra.good,
+                            modifier = Modifier.padding(start = 8.dp),
+                        ) {
+                            Text(
+                                "NOW",
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White,
+                            )
+                        }
+                    } else if (isPast) {
+                        Ic(
+                            R.drawable.ic_done,
+                            "Completed",
+                            Modifier.size(18.dp).padding(start = 6.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+
+                // Venue & Teacher Tags
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                    modifier = Modifier.padding(top = 4.dp),
+                ) {
+                    if (item.venue.isNotBlank()) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
+                            Ic(R.drawable.ic_meeting_room, null, Modifier.size(14.dp), tint = MaterialTheme.colorScheme.primary)
+                            Text(
+                                item.venue,
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                        }
+                    }
+
+                    if (item.teacher.isNotBlank()) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
+                            Ic(R.drawable.ic_person, null, Modifier.size(14.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(
+                                item.teacher,
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** Lunch break card for empty slots between 12 PM and 2 PM highlighted in yellow */
+@Composable
+private fun LunchBreakCard(slot: ScheduleTimelineItem.LunchBreakSlot) {
+    val extra = LocalExtraColors.current
+    val yellow = extra.warn
+    val yellowContainer = yellow.copy(alpha = 0.16f)
+    val yellowBorder = yellow.copy(alpha = 0.38f)
+
+    Surface(
+        shape = MaterialTheme.shapes.large,
+        color = yellowContainer,
+        border = BorderStroke(1.dp, yellowBorder),
+        contentColor = yellow,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 5.dp),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            Surface(
+                shape = CircleShape,
+                color = yellow.copy(alpha = 0.22f),
+                modifier = Modifier.size(38.dp),
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Ic(
+                        R.drawable.ic_schedule,
+                        null,
+                        Modifier.size(20.dp),
+                        tint = yellow,
+                    )
+                }
+            }
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    "Lunch Break",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = yellow,
+                )
+                val formatter = DateTimeFormatter.ofPattern("hh:mm a", Locale.US)
+                Text(
+                    "${slot.start.format(formatter)} – ${slot.end.format(formatter)}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
+            Surface(
+                shape = MaterialTheme.shapes.small,
+                color = yellow.copy(alpha = 0.22f),
+            ) {
+                Text(
+                    formatBreakDuration(slot.durationMinutes),
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = yellow,
+                )
+            }
+        }
+    }
+}
+
+/** Break divider drawing a straight line with the break length written next to the line */
+@Composable
+private fun BreakDivider(slot: ScheduleTimelineItem.BreakSlot) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .height(1.dp)
+                .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
+        )
+        Text(
+            "${formatBreakDuration(slot.durationMinutes)} break",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            fontWeight = FontWeight.Medium,
+        )
+    }
+}
+
+/** Popup drawer / bottom sheet showing full class details and associated batches */
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@Composable
+private fun ClassDetailSheet(
+    item: ClassItem,
+    currentBatch: String,
+    onDismiss: () -> Unit,
+) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 36.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            // Header: Type badge + Subject Code
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Surface(
+                    shape = MaterialTheme.shapes.small,
+                    color = when (item.type.uppercase()) {
+                        "P" -> MaterialTheme.colorScheme.secondaryContainer
+                        "T" -> MaterialTheme.colorScheme.tertiaryContainer
+                        else -> MaterialTheme.colorScheme.primaryContainer
+                    },
+                ) {
+                    Text(
+                        when (item.type.uppercase()) {
+                            "P" -> "LABORATORY"
+                            "T" -> "TUTORIAL"
+                            else -> "LECTURE"
+                        },
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = when (item.type.uppercase()) {
+                            "P" -> MaterialTheme.colorScheme.onSecondaryContainer
+                            "T" -> MaterialTheme.colorScheme.onTertiaryContainer
+                            else -> MaterialTheme.colorScheme.onPrimaryContainer
+                        },
+                    )
+                }
+
+                if (item.subjectCode.isNotBlank()) {
+                    Surface(
+                        shape = MaterialTheme.shapes.small,
+                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    ) {
+                        Text(
+                            item.subjectCode,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                }
+            }
+
+            // Subject Title
+            Text(
+                item.subject,
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+            )
+
+            // Info Card
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(MaterialTheme.shapes.large)
+                    .background(MaterialTheme.colorScheme.surfaceContainerLow)
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp),
+            ) {
+                val dayInfo = item.dayLabel.ifBlank { item.day }
+                val daySuffix = if (dayInfo.isNotBlank()) " ($dayInfo)" else ""
+                DetailRow(
+                    icon = R.drawable.ic_schedule,
+                    label = "Time Slot",
+                    value = "${item.start} – ${item.end}$daySuffix",
+                )
+                if (item.venue.isNotBlank()) {
+                    DetailRow(
+                        icon = R.drawable.ic_meeting_room,
+                        label = "Room / Venue",
+                        value = item.venue,
+                    )
+                }
+                if (item.teacher.isNotBlank()) {
+                    DetailRow(
+                        icon = R.drawable.ic_person,
+                        label = "Faculty / Teacher",
+                        value = item.teacher,
+                    )
+                }
+                if (!item.category.isNullOrBlank()) {
+                    DetailRow(
+                        icon = R.drawable.ic_school,
+                        label = "Category",
+                        value = "${item.category}${if (item.isElective) " (Elective)" else ""}",
+                    )
+                }
+            }
+
+            // Associated Batches
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                val batches = item.batches
+                val otherBatches = batches.filter { !it.equals(currentBatch, ignoreCase = true) }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        "Batches Attending",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    if (otherBatches.isNotEmpty()) {
+                        Text(
+                            "Shared with ${otherBatches.size} other ${if (otherBatches.size == 1) "batch" else "batches"}",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                }
+
+                if (batches.isNotEmpty()) {
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        batches.forEach { b ->
+                            val isCurrent = b.equals(currentBatch, ignoreCase = true)
+                            Surface(
+                                shape = MaterialTheme.shapes.small,
+                                color = if (isCurrent) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
+                                border = if (isCurrent) null else BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                ) {
+                                    Text(
+                                        b,
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Medium,
+                                        color = if (isCurrent) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
+                                    )
+                                    if (isCurrent) {
+                                        Text(
+                                            "• You",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.primary,
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    Text(
+                        "Exclusive to Batch $currentBatch",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DetailRow(
+    icon: Int,
+    label: String,
+    value: String,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Surface(
+            shape = CircleShape,
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            modifier = Modifier.size(32.dp),
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Ic(icon, null, Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
+            }
+        }
+        Column {
+            Text(
+                label,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                value,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+        }
+    }
+}
+
+/** Bottom sheet to switch campus or batch */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CampusBatchPickerSheet(
+    currentCampus: String,
+    currentBatch: String,
+    onDismiss: () -> Unit,
+    onSelect: (String, String) -> Unit,
+) {
+    val context = LocalContext.current
+    var selectedCampus by remember { mutableStateOf(currentCampus) }
+    val batches by produceState<List<String>>(initialValue = emptyList(), selectedCampus) {
+        value = ScheduleLoader.getAvailableBatches(context, selectedCampus)
+    }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 32.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            Text(
+                "Select Campus & Batch",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+            )
+
+            // Campus toggle
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                listOf("62" to "Sector 62", "128" to "Sector 128").forEach { (code, name) ->
+                    val isSelected = selectedCampus == code
+                    Surface(
+                        onClick = { selectedCampus = code },
+                        shape = MaterialTheme.shapes.medium,
+                        color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Text(
+                            name,
+                            modifier = Modifier.padding(vertical = 12.dp),
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                            color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                        )
+                    }
+                }
+            }
+
+            Text(
+                "Batches (${batches.size})",
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
+            // Batches grid in natural ascending order
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                items(batches) { b ->
+                    val isSelected = b.equals(currentBatch, ignoreCase = true) && selectedCampus == currentCampus
+                    FilterChip(
+                        selected = isSelected,
+                        onClick = { onSelect(selectedCampus, b) },
+                        label = { Text(b) },
+                    )
+                }
+            }
+        }
+    }
+}
