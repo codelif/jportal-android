@@ -22,13 +22,12 @@ Unofficial. Not affiliated with or endorsed by JIIT.
 
 ## Install
 
+[<img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png" alt="Get it on F-Droid" height="80">](https://f-droid.org/packages/in.codelif.jportal.android/)
 [<img src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" alt="Get it on Google Play" height="80">](https://play.google.com/store/apps/details?id=in.codelif.jportal.android)
 [<img src="https://raw.githubusercontent.com/ImranR98/Obtainium/main/assets/graphics/badge_obtainium.png" alt="Get it on Obtainium" height="80">](https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/codelif/jportal-android)
-[<img src="https://raw.githubusercontent.com/Kunzisoft/Github-badge/main/get-it-on-github.png" alt="Get it on GitHub" height="80">](https://github.com/codelif/jportal-android/releases/latest)
+[<img src="https://raw.githubusercontent.com/rubenpgrady/get-it-on-github/refs/heads/main/get-it-on-github.png" alt="Get it on GitHub" height="80">](https://github.com/codelif/jportal-android/releases/latest)
 
 Every release is built by CI from a signed tag, and the APK ships with a SHA-256 checksum.
-
-**F-Droid**: [coming](https://gitlab.com/fdroid/fdroiddata/-/merge_requests/51871).
 
 ## Building
 
