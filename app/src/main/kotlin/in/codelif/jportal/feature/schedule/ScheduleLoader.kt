@@ -10,6 +10,9 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.jsonObject
+import java.io.File
+import java.net.HttpURLConnection
+import java.net.URL
 import java.time.DayOfWeek
 import java.time.format.TextStyle
 import java.util.Locale
@@ -26,6 +29,9 @@ data class LoadedSchedule(
 )
 
 object ScheduleLoader {
+    const val METADATA_URL = "https://raw.githubusercontent.com/codelif/jiit-planner-cdn/refs/heads/main/metadata.json"
+    const val CLASSES_URL = "https://raw.githubusercontent.com/codelif/jiit-planner-cdn/refs/heads/main/classes.json"
+
     private val json = Json {
         ignoreUnknownKeys = true
         isLenient = true
@@ -37,15 +43,61 @@ object ScheduleLoader {
     @VisibleForTesting
     internal var testRoot: JsonObject? = null
 
-    private suspend fun getRoot(context: Context): JsonObject = testRoot ?: cachedRoot ?: withContext(Dispatchers.IO) {
-        val root = runCatching {
-            context.assets.open("schedule.json").bufferedReader().use { reader ->
-                json.parseToJsonElement(reader.readText()).jsonObject
+    private fun fetchUrl(urlStr: String): String? = runCatching {
+        val url = URL(urlStr)
+        val conn = url.openConnection() as HttpURLConnection
+        try {
+            conn.connectTimeout = 15_000
+            conn.readTimeout = 15_000
+            conn.setRequestProperty("User-Agent", "JPortal-Android")
+            if (conn.responseCode != 200) return null
+            conn.inputStream.bufferedReader().use { it.readText() }
+        } finally {
+            conn.disconnect()
+        }
+    }.getOrNull()
+
+    private suspend fun getRoot(context: Context, forceRefresh: Boolean = false): JsonObject =
+        testRoot ?: withContext(Dispatchers.IO) {
+            if (!forceRefresh && cachedRoot != null) {
+                return@withContext cachedRoot!!
             }
-        }.getOrElse { JsonObject(emptyMap()) }
-        cachedRoot = root
-        root
-    }
+            val classesFile = File(context.filesDir, "planner_classes.json")
+            val versionFile = File(context.filesDir, "planner_version.txt")
+            val localVersion = if (versionFile.exists()) runCatching { versionFile.readText().trim() }.getOrNull() else null
+
+            // Check metadata.json from CDN for cache version
+            val metaText = fetchUrl(METADATA_URL)
+            val remoteVersion = metaText?.let {
+                runCatching { json.decodeFromString<PlannerMetadata>(it).cacheVersion }.getOrNull()
+            }
+
+            val shouldDownload = forceRefresh ||
+                !classesFile.exists() ||
+                classesFile.length() == 0L ||
+                (remoteVersion != null && (localVersion == null || remoteVersion != localVersion))
+
+            if (shouldDownload && remoteVersion != null) {
+                val classesText = fetchUrl(CLASSES_URL)
+                if (classesText != null) {
+                    runCatching {
+                        classesFile.writeText(classesText)
+                        versionFile.writeText(remoteVersion)
+                    }
+                }
+            }
+
+            val jsonString = if (classesFile.exists()) {
+                runCatching { classesFile.readText() }.getOrNull()
+            } else null
+
+            val root = jsonString?.let {
+                runCatching { json.parseToJsonElement(it).jsonObject }.getOrNull()
+            } ?: cachedRoot ?: JsonObject(emptyMap())
+
+            cachedRoot = root
+            root
+        }
 
     /** Campus is either "62" or "128" */
     fun detectCampus(session: Session?, personal: PersonalInfo?, batchOverride: String? = null): String {
@@ -65,6 +117,16 @@ object ScheduleLoader {
             return "128"
         }
         return "62"
+    }
+
+    /** Course id: bca-62, btech-128, or btech-62 */
+    fun detectCourse(session: Session?, personal: PersonalInfo?, campus: String): String {
+        val prog = personal?.general?.program.orEmpty().uppercase()
+        val branch = personal?.general?.branch.orEmpty().uppercase()
+        if (prog.contains("BCA") || branch.contains("BCA")) {
+            return "bca-62"
+        }
+        return "btech-$campus"
     }
 
     fun campusDisplayName(campus: String): String = when (campus) {
@@ -110,10 +172,15 @@ object ScheduleLoader {
         personal: PersonalInfo?,
         campusOverride: String? = null,
         batchOverride: String? = null,
+        registeredSubjectCodes: Set<String> = emptySet(),
+        forceRefresh: Boolean = false,
     ): LoadedSchedule? = withContext(Dispatchers.IO) {
-        val root = getRoot(context)
+        val root = getRoot(context, forceRefresh)
+        if (root.isEmpty()) return@withContext null
+
         val userBatch = (batchOverride ?: personal?.general?.batch.orEmpty()).trim().ifEmpty { "F7" }
         val campus = campusOverride ?: detectCampus(session, personal, userBatch)
+        val course = detectCourse(session, personal, campus)
         val semesterNumber = personal?.general?.semester?.takeIf { it > 0 }
 
         // Find candidate keys for this campus and batch
@@ -127,7 +194,8 @@ object ScheduleLoader {
             if (parts.size < 4) return@filter false
             val progCampus = parts[0]
             val keyBatch = parts.drop(3).joinToString("_").lowercase()
-            progCampus.contains(targetCampusPattern) && (keyBatch == targetBatchLower || keyBatch.contains(targetBatchLower))
+            (progCampus == course || progCampus.contains(targetCampusPattern)) &&
+                (keyBatch == targetBatchLower || keyBatch.contains(targetBatchLower))
         }
 
         // Pick exact semester if available, or latest available semester
@@ -150,9 +218,10 @@ object ScheduleLoader {
         val semNum = extractSemNumber(chosenKey)
         val semLabel = if (semNum > 0) "Semester $semNum" else "Semester 1"
 
-        // Sort classes within each day by start time
+        // Sanitize classes (fixing 8 AM class ending at 08:50 PM bug) and sort classes
         val sortedClasses = batchSchedule.classes.mapValues { (_, classes) ->
-            classes.sortedBy { it.startTime }
+            classes.map { it.sanitized() }
+                .sortedBy { it.startTime }
         }
 
         val daysOrder = listOf("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday")

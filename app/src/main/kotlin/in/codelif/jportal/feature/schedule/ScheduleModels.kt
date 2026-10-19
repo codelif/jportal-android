@@ -69,6 +69,19 @@ data class ClassItem(
         return ChronoUnit.MINUTES.between(time, s).coerceAtLeast(0L)
     }
 
+    fun sanitized(): ClassItem {
+        val s = parseTime(start)
+        val e = parseTime(end)
+        if (s != null && e != null) {
+            val durationHours = java.time.Duration.between(s, e).toHours()
+            if (durationHours > 3) {
+                val fixedEnd = end.replace("PM", "AM", ignoreCase = true).replace("pm", "am")
+                return copy(end = fixedEnd)
+            }
+        }
+        return this
+    }
+
     companion object {
         private val TIME_FORMATTER = DateTimeFormatter.ofPattern("hh:mm a", Locale.US)
 
@@ -77,6 +90,21 @@ data class ClassItem(
         }.getOrNull()
     }
 }
+
+@Serializable
+data class NodeItem(
+    val id: String = "",
+    val name: String = "",
+)
+
+@Serializable
+data class PlannerMetadata(
+    val cacheVersion: String = "",
+    val courses: List<NodeItem> = emptyList(),
+    val semesters: Map<String, List<NodeItem>> = emptyMap(),
+    val phases: Map<String, Map<String, List<NodeItem>>> = emptyMap(),
+    val batches: Map<String, Map<String, Map<String, List<NodeItem>>>> = emptyMap(),
+)
 
 @Serializable
 data class BatchScheduleJson(

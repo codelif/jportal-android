@@ -1,8 +1,12 @@
 package `in`.codelif.jportal.ui.nav
 
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateList
+import `in`.codelif.jportal.feature.academics.AcademicsView
 
 /** everything you can land on. tabs are roots, the rest stack on top of them */
 sealed interface Route {
@@ -54,6 +58,13 @@ class Navigator(start: Route.Tab = Route.Planner) {
         stack.size > 1 -> { stack.removeAt(stack.lastIndex); true }
         tab != Route.Planner -> { stack[0] = Route.Planner; true }
         else -> false
+    }
+
+    var pendingAcademicsView by mutableStateOf<AcademicsView?>(null)
+
+    fun openAcademicsExams() {
+        pendingAcademicsView = AcademicsView.Exams
+        switchTab(Route.Academics)
     }
 
     fun switchTab(tab: Route.Tab) {

@@ -261,4 +261,188 @@ class ScheduleLoaderTest {
         assertTrue(timeline[0] is ScheduleTimelineItem.ClassSlot)
         assertTrue(timeline[1] is ScheduleTimelineItem.ClassSlot)
     }
+
+    @Test
+    fun testClassItemSanitizationFixes8AmEndingAt850Pm() {
+        val bugged = ClassItem(
+            subject = "Operating Systems",
+            start = "08:00 AM",
+            end = "08:50 PM",
+        )
+        val fixed = bugged.sanitized()
+        assertEquals("08:50 AM", fixed.end)
+        assertEquals("08:00 AM", fixed.start)
+
+        val regular = ClassItem(
+            subject = "Physics",
+            start = "09:00 AM",
+            end = "09:50 AM",
+        )
+        val regularFixed = regular.sanitized()
+        assertEquals("09:50 AM", regularFixed.end)
+    }
+
+    @Test
+    fun testDetectCourseForBcaAndBtech() {
+        val bcaPersonal = PersonalInfo(general = GeneralInfo(program = "BCA", branch = "BCA"))
+        val btechPersonal = PersonalInfo(general = GeneralInfo(program = "B.Tech", branch = "CSE"))
+
+        assertEquals("bca-62", ScheduleLoader.detectCourse(null, bcaPersonal, "62"))
+        assertEquals("btech-128", ScheduleLoader.detectCourse(null, btechPersonal, "128"))
+        assertEquals("btech-62", ScheduleLoader.detectCourse(null, btechPersonal, "62"))
+    }
+
+    @Test
+    fun testComputeDateForDay() {
+        // Assume reference date is Monday 2026-10-19
+        val refDate = java.time.LocalDate.of(2026, 10, 19)
+        assertEquals(java.time.LocalDate.of(2026, 10, 19), computeDateForDay("Monday", refDate))
+        assertEquals(java.time.LocalDate.of(2026, 10, 20), computeDateForDay("Tuesday", refDate))
+        assertEquals(java.time.LocalDate.of(2026, 10, 21), computeDateForDay("Wednesday", refDate))
+        assertEquals(java.time.LocalDate.of(2026, 10, 22), computeDateForDay("Thursday", refDate))
+        assertEquals(java.time.LocalDate.of(2026, 10, 23), computeDateForDay("Friday", refDate))
+        assertEquals(java.time.LocalDate.of(2026, 10, 24), computeDateForDay("Saturday", refDate))
+        assertEquals(java.time.LocalDate.of(2026, 10, 25), computeDateForDay("Sunday", refDate))
+    }
+
+    @Test
+    fun testBatchExamMatchingLogic() {
+        // When user has no batch
+        val nullUserBatch: String? = null
+        val selectedBatch = "F7"
+        val isMatchNullUser = nullUserBatch != null && selectedBatch.equals(nullUserBatch, ignoreCase = true)
+        assertEquals(false, isMatchNullUser)
+
+        // When user batch differs from selected batch
+        val userBatch = "F7"
+        val otherSelectedBatch = "F30"
+        val isMatchDifferent = userBatch.equals(otherSelectedBatch, ignoreCase = true)
+        assertEquals(false, isMatchDifferent)
+
+        // When user batch matches selected batch
+        val sameBatch = "f7"
+        val isMatchSame = userBatch.equals(sameBatch, ignoreCase = true)
+        assertEquals(true, isMatchSame)
+    }
+
+    @Test
+    fun testFilterElectivesWithPortalMatch() {
+        val electiveA = ClassItem(
+            subject = "Machine Learning",
+            subjectCode = "15B11CI511",
+            start = "09:00 AM",
+            end = "09:50 AM",
+            isElective = true,
+        )
+        val electiveB = ClassItem(
+            subject = "Cloud Computing",
+            subjectCode = "15B11CI512",
+            start = "09:00 AM",
+            end = "09:50 AM",
+            isElective = true,
+        )
+        val regularClass = ClassItem(
+            subject = "Operating Systems",
+            subjectCode = "15B11CI411",
+            start = "10:00 AM",
+            end = "10:50 AM",
+            isElective = false,
+        )
+
+        val classes = listOf(electiveA, electiveB, regularClass)
+
+        // Portal has Elective B
+        val filtered = filterElectivesForDay(
+            classes = classes,
+            batch = "F7",
+            day = "Monday",
+            portalCodes = setOf("15B11CI512"),
+            portalNames = emptySet(),
+        )
+
+        assertEquals(2, filtered.size)
+        assertEquals(electiveB.subjectCode, filtered[0].subjectCode)
+        assertEquals(regularClass.subjectCode, filtered[1].subjectCode)
+    }
+
+    @Test
+    fun testFilterElectivesWithoutPortalMatchDefaultsToFirst() {
+        val electiveA = ClassItem(
+            subject = "Elective 1",
+            subjectCode = "EL101",
+            start = "11:00 AM",
+            end = "11:50 AM",
+            isElective = true,
+        )
+        val electiveB = ClassItem(
+            subject = "Elective 2",
+            subjectCode = "EL102",
+            start = "11:00 AM",
+            end = "11:50 AM",
+            isElective = true,
+        )
+
+        val classes = listOf(electiveA, electiveB)
+
+        // No portal match and no user choice in memory
+        ElectiveMemoryStore.slotChoices.clear()
+        ElectiveMemoryStore.chosenSubjects.clear()
+
+        val filtered = filterElectivesForDay(
+            classes = classes,
+            batch = "F7",
+            day = "Monday",
+            portalCodes = emptySet(),
+            portalNames = emptySet(),
+        )
+
+        assertEquals(1, filtered.size)
+        assertEquals("EL101", filtered[0].subjectCode)
+    }
+
+    @Test
+    fun testFilterElectivesWithMemoryStoreSelection() {
+        val electiveA = ClassItem(
+            subject = "Elective 1",
+            subjectCode = "EL101",
+            start = "11:00 AM",
+            end = "11:50 AM",
+            day = "Tuesday",
+            isElective = true,
+        )
+        val electiveB = ClassItem(
+            subject = "Elective 2",
+            subjectCode = "EL102",
+            start = "11:00 AM",
+            end = "11:50 AM",
+            day = "Tuesday",
+            isElective = true,
+        )
+
+        val classes = listOf(electiveA, electiveB)
+
+        ElectiveMemoryStore.slotChoices.clear()
+        ElectiveMemoryStore.chosenSubjects.clear()
+
+        // User chooses Elective 2
+        ElectiveMemoryStore.setChoice(
+            batch = "F7",
+            day = "Tuesday",
+            start = "11:00 AM",
+            end = "11:50 AM",
+            chosen = electiveB,
+        )
+
+        val filtered = filterElectivesForDay(
+            classes = classes,
+            batch = "F7",
+            day = "Tuesday",
+            portalCodes = emptySet(),
+            portalNames = emptySet(),
+        )
+
+        assertEquals(1, filtered.size)
+        assertEquals("EL102", filtered[0].subjectCode)
+    }
 }
+
