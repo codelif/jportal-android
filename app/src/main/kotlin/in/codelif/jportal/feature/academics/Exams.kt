@@ -67,6 +67,7 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -90,6 +91,7 @@ import `in`.codelif.jportal.ui.components.Ic
 import `in`.codelif.jportal.ui.components.MessageState
 import `in`.codelif.jportal.ui.components.RAIL_PAD
 import `in`.codelif.jportal.ui.components.Rail
+import `in`.codelif.jportal.ui.components.badgeCap
 import `in`.codelif.jportal.ui.components.ScreenScaffold
 import `in`.codelif.jportal.ui.components.SectionHeader
 import `in`.codelif.jportal.ui.components.SemesterPicker
@@ -444,7 +446,7 @@ private fun PaperRow(p: Paper, view: ExamsView, up: Boolean, down: Boolean) {
             }
             if (!stacked && !done) {
                 Spacer(Modifier.width(8.dp))
-                Box(Modifier.padding(vertical = RAIL_PAD).align(Alignment.CenterVertically)) { SeatBadge(p, p.key in view.fresh, next) }
+                Box(Modifier.widthIn(max = badgeCap()).padding(vertical = RAIL_PAD).align(Alignment.CenterVertically)) { SeatBadge(p, p.key in view.fresh, next) }
             }
         }
     }
@@ -508,7 +510,13 @@ private fun SeatBadge(p: Paper, fresh: Boolean, lifted: Boolean) {
         }
         Surface(shape = shape, color = color) {
             Column(Modifier.widthIn(min = 56.dp).then(inner), horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(s.room.ifBlank { "Room ?" }, style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold), maxLines = 1)
+                Text(
+                    badgeRoom(s.room).ifBlank { "Room ?" },
+                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                    textAlign = TextAlign.Center,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
                 if (s.seat.isNotBlank()) Text("seat ${s.seat}", style = MaterialTheme.typography.labelSmall, maxLines = 1)
                 if (fresh) Text("just in", style = MaterialTheme.typography.labelSmall, color = scheme.tertiary)
             }
@@ -520,6 +528,9 @@ private fun SeatBadge(p: Paper, fresh: Boolean, lifted: Boolean) {
         }
     }
 }
+
+// some rooms come whole, "G7 : CLASS ROOM G-7  GF ABB1". the badge only needs the code, the sheet shows the rest
+private fun badgeRoom(room: String) = room.substringBefore(':').trim().ifBlank { room.trim() }
 
 private fun Modifier.dashed(color: Color, radius: Dp) = drawBehind {
     val w = 1.dp.toPx()

@@ -55,6 +55,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
@@ -86,6 +87,7 @@ import `in`.codelif.jportal.ui.components.RAIL_PAD
 import `in`.codelif.jportal.ui.components.Rail
 import `in`.codelif.jportal.ui.components.ScreenScaffold
 import `in`.codelif.jportal.ui.components.StaleNotice
+import `in`.codelif.jportal.ui.components.badgeCap
 import `in`.codelif.jportal.ui.components.dropdown
 import `in`.codelif.jportal.ui.components.group
 import `in`.codelif.jportal.ui.components.rememberClockWidth
@@ -482,7 +484,7 @@ private fun ClassRow(view: PlannerView, k: Klass, row: Int, up: Boolean, down: B
             }
             if (!stacked && k.venue.isNotBlank()) {
                 Spacer(Modifier.width(8.dp))
-                Box(Modifier.padding(vertical = RAIL_PAD).align(Alignment.CenterVertically)) { Venue(k.venue, live) }
+                Box(Modifier.widthIn(max = badgeCap()).padding(vertical = RAIL_PAD).align(Alignment.CenterVertically)) { Venue(k.venue, live) }
             }
         }
     }
@@ -493,7 +495,13 @@ private fun Venue(venue: String, lifted: Boolean) {
     val scheme = MaterialTheme.colorScheme
     Surface(shape = MaterialTheme.shapes.medium, color = if (lifted) scheme.surface else scheme.secondaryContainer) {
         Box(Modifier.widthIn(min = 56.dp).padding(horizontal = 10.dp, vertical = 6.dp), contentAlignment = Alignment.Center) {
-            Text(venue, style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold), maxLines = 1)
+            Text(
+                venue,
+                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                textAlign = TextAlign.Center,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
     }
 }

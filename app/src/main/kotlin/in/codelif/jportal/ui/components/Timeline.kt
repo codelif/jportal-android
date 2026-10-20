@@ -29,6 +29,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.SpanStyle
@@ -131,6 +132,13 @@ fun Rail(accent: Boolean, up: Boolean, down: Boolean, modifier: Modifier = Modif
         },
     )
 }
+
+/**
+ * the widest a badge beside a row's text gets, so a long portal string wraps instead of eating the text.
+ * off the window, not the row: rows size by intrinsics and only a plain widthIn holds up there
+ */
+@Composable
+fun badgeCap(): Dp = with(LocalDensity.current) { (LocalWindowInfo.current.containerSize.width * 0.35f).toDp() }
 
 /**
  * a day on a date strip: weekday letter, date, up to three dots under it.

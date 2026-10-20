@@ -328,7 +328,8 @@ object Demo {
     private fun slot(s: Subj, day: LocalDate, time: Pair<String, String>, i: Int, seated: Boolean) = ExamSlot(
         date = day.format(DATE), from = time.first, until = "${time.first} to ${time.second}",
         subject = title(s), code = s.code,
-        room = if (seated) listOf("CR-4", "LT-2", "G-7", "CR-11")[i % 4] else "", seat = if (seated) "B${12 + i * 3}" else "",
+        // the portal sends some rooms whole, name and block and all
+        room = if (seated) listOf("CR-4", "LT-2", "G7 : CLASS ROOM G-7  GF ABB1", "CR-11")[i % 4] else "", seat = if (seated) "B${12 + i * 3}" else "",
     )
 
     private fun marks(theory: List<Subj>): MarksReport {
