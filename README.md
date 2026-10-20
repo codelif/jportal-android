@@ -43,6 +43,10 @@ The portal client is [ktjiit](https://github.com/codelif/ktjiit), pulled in as a
 
 There are two flavors: `github` (can check GitHub for updates, once that is switched on in settings) and `play` (can't). F-Droid ships the `github` one.
 
+## Contributing
+
+Fixes are welcome, features too (talk to me first, in an issue). The ground rules, including the one on AI, are in [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## Privacy
 
 Your portal session is sealed with an Android Keystore key and never leaves the phone except to talk to the portal. No analytics and no crash reporting. The "copy debug report" button under About is the only diagnostics, and it strips tokens, names and ids. The full policy is in [PRIVACY.md](PRIVACY.md).
