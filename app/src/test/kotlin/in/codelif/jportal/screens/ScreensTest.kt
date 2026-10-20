@@ -182,6 +182,12 @@ class ScreensTest(private val look: Look) {
     }
 
     @Test
+    fun planner() {
+        tab("planner")
+        shot("planner")
+    }
+
+    @Test
     fun me() {
         tab("me")
         shot("me")

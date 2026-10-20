@@ -28,7 +28,7 @@ class AppGraph(context: Context, demo: Boolean = BuildConfig.DEMO) {
     val repo = Repository(cache, sessions, scope) { !this.demo }
     val updates = Updates(context, scope, prefs)
     val calendar = CalendarSync(context, prefs, repo, scope)
-    val timetable = TimetableSource(context, scope) { null }
+    val timetable = TimetableSource(context, scope) { if (this.demo) Demo.timetable else null }
 
     /** the made up student is signed in, nothing may touch the portal */
     val demo: Boolean get() = Demo.owns(sessions.session)

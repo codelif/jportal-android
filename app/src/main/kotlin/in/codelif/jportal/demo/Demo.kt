@@ -2,6 +2,8 @@ package `in`.codelif.jportal.demo
 
 import `in`.codelif.jportal.data.AppClock
 import `in`.codelif.jportal.data.Cache
+import `in`.codelif.jportal.domain.Klass
+import `in`.codelif.jportal.domain.Timetable
 import `in`.codelif.ktjiit.auth.Session
 import `in`.codelif.ktjiit.http.Transport
 import `in`.codelif.ktjiit.marks.EventScore
@@ -18,6 +20,7 @@ import kotlinx.serialization.json.put
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlin.random.Random
@@ -344,6 +347,44 @@ object Demo {
                     ),
                 )
             },
+        )
+    }
+
+    /** the planner's week for F7, in the cdn's shape. marketing is an elective, the one the registration has */
+    val timetable: Timetable by lazy {
+        fun k(day: DayOfWeek, at: String, until: String, subject: String, code: String, type: String, teacher: String, venue: String, category: String? = null) =
+            Klass(day, LocalTime.parse(at), LocalTime.parse(until), subject, code, teacher, venue, type, category, category != null, listOf("F7", "F8"))
+        val cd = "Compiler Design"
+        val ml = "Machine Learning and Data Mining"
+        val cc = "Cloud Computing"
+        val week = listOf(
+            k(MON, "09:00", "09:50", cd, "15B11CI712", "L", "Neha Kapoor", "CR-4"),
+            k(MON, "10:00", "10:50", ml, "15B11CI713", "L", "Ankit Saxena", "LT-2"),
+            k(MON, "11:00", "11:50", "Marketing Management", "16B1NHS732", "L", "Isha Malhotra", "G-7", "HSS ELECTIVE"),
+            k(MON, "11:00", "11:50", "Consumer Behaviour", "16B1NHS733", "L", "Ritu Arora", "G-8", "HSS ELECTIVE"),
+            k(TUE, "09:00", "09:50", ml, "15B11CI713", "T", "Priya Nair", "TS-12"),
+            k(TUE, "10:00", "10:50", cc, "15B1NCI731", "L", "Kavita Rao", "LT-2"),
+            k(WED, "09:00", "09:50", cd, "15B11CI712", "L", "Neha Kapoor", "CR-4"),
+            k(WED, "10:00", "11:40", "Machine Learning Lab", "15B17CI771", "P", "Sumit Bhatia", "CL-3"),
+            k(WED, "14:00", "14:50", cd, "15B11CI712", "T", "Rahul Verma", "TS-5"),
+            k(THU, "09:00", "09:50", ml, "15B11CI713", "L", "Ankit Saxena", "LT-2"),
+            k(THU, "10:00", "10:50", cc, "15B1NCI731", "L", "Kavita Rao", "LT-2"),
+            k(THU, "11:00", "11:50", cc, "15B1NCI731", "T", "Kavita Rao", "TS-5"),
+            k(THU, "14:00", "14:50", "Marketing Management", "16B1NHS732", "L", "Isha Malhotra", "G-7", "HSS ELECTIVE"),
+            k(THU, "14:00", "14:50", "Consumer Behaviour", "16B1NHS733", "L", "Ritu Arora", "G-8", "HSS ELECTIVE"),
+            k(THU, "15:00", "15:50", ml, "15B11CI713", "L", "Ankit Saxena", "LT-2"),
+            k(FRI, "09:00", "09:50", cd, "15B11CI712", "L", "Neha Kapoor", "CR-4"),
+            k(FRI, "10:00", "10:50", cc, "15B1NCI731", "L", "Kavita Rao", "LT-2"),
+            k(FRI, "11:00", "12:40", "Cloud Computing Lab", "15B17CI772", "P", "Priya Nair", "CL-1"),
+        )
+        Timetable(
+            "demo",
+            listOf(
+                Timetable.Course(
+                    "btech-128", "B.Tech 128",
+                    listOf(Timetable.Semester("sem7", "7", listOf(Timetable.Phase("phase1", "1", listOf(Timetable.Batch("f7", "F7", week), Timetable.Batch("f8", "F8", week)))))),
+                ),
+            ),
         )
     }
 }
