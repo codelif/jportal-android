@@ -9,7 +9,6 @@ import kotlinx.coroutines.sync.Semaphore
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.builtins.nullable
-import `in`.codelif.jportal.domain.Paper
 
 /**
  * every portal answer the app shows, as a cached [Store]. keys carry the
@@ -52,18 +51,6 @@ class Repository(
 
     fun subjects(sem: Semester) = store("subj:${sem.id}", RegisteredSubjects.serializer(), 6 * 60) { it.registeredSubjects(sem) }
 
-    suspend fun currentRegisteredSubjects(force: Boolean = false): List<SubjectFaculty> {
-        if (force) {
-            subjectSemesters.refresh(force = true)
-        }
-        val sem = subjectSemesters.await().data?.firstOrNull() ?: return emptyList()
-        val subStore = subjects(sem)
-        if (force) {
-            subStore.refresh(force = true)
-        }
-        return subStore.await().data?.rows.orEmpty()
-    }
-
     val credits get() = store("credits", Credits.serializer(), 6 * 60) { it.credits() }
 
     // exams
@@ -73,25 +60,6 @@ class Repository(
     fun examEvents(sem: Semester) = store("exam_ev:${sem.id}", ListSerializer(ExamEvent.serializer()), 60) { it.examEvents(sem) }
 
     fun examSchedule(ev: ExamEvent) = store("exam_sch:${ev.id}", ListSerializer(ExamSlot.serializer()), 60) { it.examSchedule(ev) }
-
-    suspend fun currentExamPapers(force: Boolean = false): List<Paper> {
-        if (force) {
-            examSemesters.refresh(force = true)
-        }
-        val sem = examSemesters.await().data?.firstOrNull() ?: return emptyList()
-        val evStore = examEvents(sem)
-        if (force) {
-            evStore.refresh(force = true)
-        }
-        val events = evStore.await().data ?: return emptyList()
-        return events.flatMap { ev ->
-            val schStore = examSchedule(ev)
-            if (force) {
-                schStore.refresh(force = true)
-            }
-            schStore.await().data?.map { Paper(ev, it) } ?: emptyList()
-        }
-    }
 
     // marks and grades
 

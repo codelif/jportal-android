@@ -140,17 +140,10 @@ class ScreensTest(private val look: Look) {
     private fun root() = compose.onRoot().fetchSemanticsNode().size
 
     @Test
-    fun planner() = shot("planner")
-
-    @Test
-    fun attendance() {
-        tab("attendance")
-        shot("attendance")
-    }
+    fun attendance() = shot("attendance")
 
     @Test
     fun subject() {
-        tab("attendance")
         open("Compiler Design")
         shot("subject")
     }
