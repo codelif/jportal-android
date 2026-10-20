@@ -190,6 +190,7 @@ dependencies {
     implementation(libs.profileinstaller)
     implementation(libs.splashscreen)
     implementation(libs.serialization.json)
+    implementation(libs.serialization.cbor)
     implementation(libs.coroutines.android)
 
     testImplementation(libs.junit4)

@@ -29,6 +29,7 @@ webkit = { module = "androidx.webkit:webkit", version.ref = "webkit" }
 profileinstaller = { module = "androidx.profileinstaller:profileinstaller", version.ref = "profileinstaller" }
 splashscreen = { module = "androidx.core:core-splashscreen", version.ref = "splashscreen" }
 serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "serialization" }
+serialization-cbor = { module = "org.jetbrains.kotlinx:kotlinx-serialization-cbor", version.ref = "serialization" }
 coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "coroutines" }
 ktjiit = { module = "in.codelif:ktjiit" }
 junit4 = { module = "junit:junit", version.ref = "junit4" }
