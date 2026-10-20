@@ -1,8 +1,12 @@
 package `in`.codelif.jportal.ui.nav
 
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateList
+import `in`.codelif.jportal.feature.academics.AcademicsView
 
 /** everything you can land on. tabs are roots, the rest stack on top of them */
 sealed interface Route {
@@ -11,6 +15,7 @@ sealed interface Route {
     sealed interface Tab : Route
     data object Attendance : Tab { override val key = "attendance" }
     data object Academics : Tab { override val key = "academics" }
+    data object Planner : Tab { override val key = "planner" }
     data object Subjects : Tab { override val key = "subjects" }
     data object Me : Tab { override val key = "me" }
 
@@ -31,18 +36,18 @@ sealed interface Route {
     data object About : Route { override val key = "about" }
 
     companion object {
-        val tabs: List<Tab> = listOf(Attendance, Academics, Subjects, Me)
+        val tabs: List<Tab> = listOf(Attendance, Academics, Planner, Subjects, Me)
     }
 }
 
 /** a plain back stack. no navigation library, the whole thing is this list */
 @Stable
-class Navigator(start: Route.Tab = Route.Attendance) {
+class Navigator(start: Route.Tab = Route.Planner) {
     val stack: SnapshotStateList<Route> = mutableStateListOf(start)
 
     val current: Route get() = stack.last()
     val tab: Route.Tab get() = stack.first() as Route.Tab
-    val canPop: Boolean get() = stack.size > 1 || tab != Route.Attendance
+    val canPop: Boolean get() = stack.size > 1 || tab != Route.Planner
 
     fun push(route: Route) {
         if (current != route) stack.add(route)
@@ -51,8 +56,15 @@ class Navigator(start: Route.Tab = Route.Attendance) {
     /** back from a tab root goes home first, like every well behaved android app */
     fun pop(): Boolean = when {
         stack.size > 1 -> { stack.removeAt(stack.lastIndex); true }
-        tab != Route.Attendance -> { stack[0] = Route.Attendance; true }
+        tab != Route.Planner -> { stack[0] = Route.Planner; true }
         else -> false
+    }
+
+    var pendingAcademicsView by mutableStateOf<AcademicsView?>(null)
+
+    fun openAcademicsExams() {
+        pendingAcademicsView = AcademicsView.Exams
+        switchTab(Route.Academics)
     }
 
     fun switchTab(tab: Route.Tab) {
@@ -65,7 +77,7 @@ class Navigator(start: Route.Tab = Route.Attendance) {
     val previous: Route?
         get() = when {
             stack.size > 1 -> stack[stack.lastIndex - 1]
-            tab != Route.Attendance -> Route.Attendance
+            tab != Route.Planner -> Route.Planner
             else -> null
         }
 

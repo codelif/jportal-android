@@ -65,7 +65,15 @@ fun AcademicsScreen() {
     val credits by repo.credits.state.collectAsState()
     val program by repo.program.state.collectAsState()
     LaunchedEffect(Unit) { repo.credits.refresh(); repo.program.refresh() }
-    var view by rememberSaveable { mutableStateOf(AcademicsView.Overview) }
+    val nav = LocalNavigator.current
+    var view by rememberSaveable { mutableStateOf(nav.pendingAcademicsView ?: AcademicsView.Overview) }
+    LaunchedEffect(nav.pendingAcademicsView) {
+        val target = nav.pendingAcademicsView
+        if (target != null) {
+            view = target
+            nav.pendingAcademicsView = null
+        }
+    }
     // each view keeps its own scroll
     val lists = AcademicsView.entries.associateWith { rememberLazyListState() }
     // projected sgpa per semester, survives rotation and tab switches
