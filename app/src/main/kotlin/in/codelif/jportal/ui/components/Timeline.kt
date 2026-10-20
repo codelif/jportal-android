@@ -32,6 +32,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
@@ -60,14 +61,25 @@ fun rememberClockWidth(): Dp {
     val measurer = rememberTextMeasurer()
     val density = LocalDensity.current
     return remember(bold, small, density) {
-        val clock = buildAnnotatedString {
-            withStyle(bold.toSpanStyle()) { append("12:00") }
-            withStyle(SpanStyle(fontSize = small.fontSize, fontWeight = small.fontWeight)) { append(" PM") }
-        }
-        val px = maxOf(measurer.measure(clock).size.width, measurer.measure("to 12:00 PM", small).size.width)
+        val start = measurer.measure(face(WIDEST, small), bold).size.width
+        val end = measurer.measure(until(LocalTime.MIDNIGHT, WIDEST.plusHours(12)), small).size.width
+        val px = maxOf(start, end)
         with(density) { px.toDp() }
     }
 }
+
+// sans flex digits aren't tabular, 0 and A are its widest, so this beats 12:00 PM. ClockTest holds it to that
+internal val WIDEST: LocalTime = LocalTime.of(10, 0)
+
+/** the start as drawn, a big h:mm and a small am/pm */
+internal fun face(start: LocalTime, small: TextStyle) = buildAnnotatedString {
+    append(start.format(CLOCK))
+    withStyle(SpanStyle(fontSize = small.fontSize, fontWeight = small.fontWeight)) { append(" " + start.format(MERIDIEM).uppercase()) }
+}
+
+/** across noon the end needs its own am/pm */
+internal fun until(start: LocalTime, end: LocalTime) =
+    "to " + (if ((start.hour < 12) == (end.hour < 12)) end.format(CLOCK) else end.format(TIME))
 
 /** big start over a small end. [active] off drops the weight, for rows the planner's dot isn't on */
 @Composable
@@ -75,19 +87,14 @@ fun Clock(start: LocalTime, end: LocalTime?, active: Boolean = true) {
     val small = MaterialTheme.typography.labelMedium
     val big = MaterialTheme.typography.titleLarge.copy(fontWeight = if (active) FontWeight.Bold else FontWeight.Normal)
     Text(
-        buildAnnotatedString {
-            append(start.format(CLOCK))
-            withStyle(SpanStyle(fontSize = small.fontSize, fontWeight = small.fontWeight)) { append(" " + start.format(MERIDIEM).uppercase()) }
-        },
+        face(start, small),
         style = big,
         color = MaterialTheme.colorScheme.primary,
         maxLines = 1,
     )
     if (end != null) {
-        // across noon the end needs its own am/pm
-        val sameHalf = (start.hour < 12) == (end.hour < 12)
         Text(
-            "to " + (if (sameHalf) end.format(CLOCK) else end.format(TIME)),
+            until(start, end),
             style = if (active) small else small.copy(fontWeight = FontWeight.Normal),
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1,
