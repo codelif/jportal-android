@@ -8,6 +8,7 @@ import `in`.codelif.jportal.data.CalendarSync
 import `in`.codelif.jportal.demo.Demo
 import `in`.codelif.jportal.data.Prefs
 import `in`.codelif.jportal.data.Repository
+import `in`.codelif.jportal.data.TimetableSource
 import `in`.codelif.jportal.data.Updates
 import `in`.codelif.jportal.session.SessionManager
 import `in`.codelif.jportal.session.SessionStore
@@ -27,6 +28,7 @@ class AppGraph(context: Context, demo: Boolean = BuildConfig.DEMO) {
     val repo = Repository(cache, sessions, scope) { !this.demo }
     val updates = Updates(context, scope, prefs)
     val calendar = CalendarSync(context, prefs, repo, scope)
+    val timetable = TimetableSource(context, scope) { null }
 
     /** the made up student is signed in, nothing may touch the portal */
     val demo: Boolean get() = Demo.owns(sessions.session)
