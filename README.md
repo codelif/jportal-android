@@ -7,15 +7,17 @@ Unofficial. Not affiliated with or endorsed by JIIT.
 ## What's in it
 
 <p align="center">
-  <img src="app/src/test/screenshots/attendance_light.png" width="200">
-  <img src="app/src/test/screenshots/subject_light.png" width="200">
-  <img src="app/src/test/screenshots/academics_dark.png" width="200">
-  <img src="app/src/test/screenshots/exams_dark.png" width="200">
+  <img src="app/src/test/screenshots/attendance_light.png" width="160">
+  <img src="app/src/test/screenshots/subject_light.png" width="160">
+  <img src="app/src/test/screenshots/academics_dark.png" width="160">
+  <img src="app/src/test/screenshots/exams_dark.png" width="160">
+  <img src="app/src/test/screenshots/planner_light.png" width="160">
 </p>
 
 - attendance, counted class by class
 - how many classes you can skip, or need to attend (the actual reason you are here)
 - exam schedule with rooms, seats and a countdown (nobody asked for the countdown)
+- your week's classes on a timeline that follows your scroll, the [jpoop-planner](https://github.com/codelif/jpoop-planner) way (now you know which room you're late to)
 - SGPA, CGPA, grade cards and marks (viewer discretion advised)
 - a CGPA what-if for the semesters to come (hope is free)
 - works offline (unlike the portal, which barely works online)
@@ -53,7 +55,7 @@ Your portal session is sealed with an Android Keystore key and never leaves the 
 
 ## Credits
 
-Big 🍆 Energy lives on in [Yash Malik](https://github.com/codeblech): [JPortal](https://github.com/codeblech/jportal) gave this app its design and its spirit, and its hand-drawn icon lives on as the YR Special in settings. Protocol groundwork from [jsjiit](https://github.com/codeblech/jsjiit) and [pyjiit](https://github.com/codelif/pyjiit). See NOTICE.
+Big 🍆 Energy lives on in [Yash Malik](https://github.com/codeblech): [JPortal](https://github.com/codeblech/jportal) gave this app its design and its spirit, and its hand-drawn icon lives on as the YR Special in settings. Protocol groundwork from [jsjiit](https://github.com/codeblech/jsjiit) and [pyjiit](https://github.com/codelif/pyjiit). The planner's timeline comes from [jpoop-planner](https://github.com/codelif/jpoop-planner), its timetables from [jiit-planner-cdn](https://github.com/codelif/jiit-planner-cdn), and [foglomon](https://github.com/foglomon) got it started in this app. See NOTICE.
 
 ## License
 
