@@ -199,7 +199,7 @@ fun rememberExams(startAt: String?): ExamsView {
 
 /** now, to the minute, ticking on the minute. every countdown on screen reads this one clock */
 @Composable
-private fun rememberMinute(): LocalDateTime {
+internal fun rememberMinute(): LocalDateTime {
     val now by produceState(AppClock.now().truncatedTo(ChronoUnit.MINUTES)) {
         while (true) {
             val t = AppClock.now()
@@ -644,7 +644,7 @@ private fun spokenLength(m: Long) = when {
 }
 
 @Composable
-private fun Fact(icon: Int, text: String, sub: String?, tint: Color = MaterialTheme.colorScheme.onSurfaceVariant) {
+internal fun Fact(icon: Int, text: String, sub: String?, tint: Color = MaterialTheme.colorScheme.onSurfaceVariant) {
     Row(Modifier.fillMaxWidth().semantics(mergeDescendants = true) {}, verticalAlignment = Alignment.Top) {
         Ic(icon, null, Modifier.padding(top = 2.dp).size(20.dp), tint = tint)
         Spacer(Modifier.width(16.dp))
