@@ -5,6 +5,10 @@ import android.content.SharedPreferences
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.serialization.builtins.MapSerializer
+import kotlinx.serialization.builtins.SetSerializer
+import kotlinx.serialization.builtins.serializer
+import kotlinx.serialization.json.Json
 
 enum class ThemeMode { System, Light, Dark }
 enum class Palette { Wallpaper, JPortal }
@@ -41,6 +45,13 @@ class Prefs(context: Context) {
     private val calendar = Pref<Long?>("cal_id", null, { k, _ -> sp.getLong(k, -1).takeIf { it >= 0 } }, { k, v -> if (v == null) remove(k) else putLong(k, v) })
     private val calDenied = Pref("cal_denied", false, { k, d -> sp.getBoolean(k, d) }, { k, v -> putBoolean(k, v) })
     private val updateCheck = Pref("update_check", false, { k, d -> sp.getBoolean(k, d) }, { k, v -> putBoolean(k, v) })
+    private val plannerBatch = Pref<String?>("planner_batch", null, { k, d -> sp.getString(k, d) }, { k, v -> putString(k, v) })
+    private val electives = Pref<Map<String, Map<String, Set<String>>>>(
+        "planner_electives", emptyMap(),
+        { k, d -> sp.getString(k, null)?.let { runCatching { Json.decodeFromString(PICKS, it) }.getOrNull() } ?: d },
+        { k, v -> putString(k, Json.encodeToString(PICKS, v)) },
+    )
+    private val timeline = Pref("planner_timeline", true, { k, d -> sp.getBoolean(k, d) }, { k, v -> putBoolean(k, v) })
 
     val themeModeState get() = themeMode.state
     val paletteState get() = palette.state
@@ -60,6 +71,11 @@ class Prefs(context: Context) {
     val calendarDeniedState get() = calDenied.state
     /** asking github for a newer version, off until someone turns it on */
     val updateCheckState get() = updateCheck.state
+    /** a [in.codelif.jportal.domain.BatchPath] key picked by hand, null means whatever the portal says */
+    val plannerBatchState get() = plannerBatch.state
+    /** phase key to category to the elective subjects picked. a phase missing here was never set, so it gets prefilled */
+    val electivesState get() = electives.state
+    val timelineState get() = timeline.state
 
     fun setThemeMode(v: ThemeMode) = themeMode.set(v)
     fun setPalette(v: Palette) = palette.set(v)
@@ -73,10 +89,19 @@ class Prefs(context: Context) {
     fun setCalendar(id: Long?) = calendar.set(id)
     fun setCalendarDenied(v: Boolean) = calDenied.set(v)
     fun setUpdateCheck(v: Boolean) = updateCheck.set(v)
+    fun setPlannerBatch(key: String?) = plannerBatch.set(key)
+    fun setElectives(phase: String, picks: Map<String, Set<String>>) = electives.set(electives.state.value + (phase to picks))
+    fun setTimeline(v: Boolean) = timeline.set(v)
 
     fun clearAccountBits() {
         semester.set(null)
         lastMarks.set(null)
         photo.set(false)
+        plannerBatch.set(null)
+        electives.set(emptyMap())
+    }
+
+    private companion object {
+        val PICKS = MapSerializer(String.serializer(), MapSerializer(String.serializer(), SetSerializer(String.serializer())))
     }
 }
