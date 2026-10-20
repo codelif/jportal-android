@@ -1,0 +1,9 @@
+Planner is here!
+
+- new: Planner tab with your week's classes, and the moving timeline from jpoop-planner
+- new: picks your batch from the portal and electives from your subjects, change them from the batch chip
+- new: exam today? a banner takes you straight to the date sheet
+- fix: exam cards stay readable on every wallpaper colour
+- fix: long room names from the portal don't squash the exam card anymore
+
+thanks @foglomon for getting the planner started

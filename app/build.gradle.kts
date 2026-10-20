@@ -28,8 +28,8 @@ android {
         targetSdk = 36
         // f-droid reads these two lines straight out of this file and builds with no tag in the environment,
         // so they stay plain literals. tools/release.sh won't tag a release they don't describe
-        versionCode = 10199
-        versionName = "0.1.1"
+        versionCode = 20099
+        versionName = "0.2.0"
         tag?.let { t ->
             // a test round (v0.2.0-rc.2) is cut without a bump and takes its version from the tag, a release has to match
             check('-' in t || (t == versionName && codeOf(t) == versionCode)) {
