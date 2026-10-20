@@ -427,7 +427,7 @@ private fun PaperRow(p: Paper, view: ExamsView, up: Boolean, down: Boolean) {
     // the group card clips, so a plain tint fills it to its rounded edges
     Surface(
         onClick = { view.openSheet("p:${p.key}") },
-        color = if (next) scheme.tertiaryContainer.copy(alpha = 0.6f) else Color.Transparent,
+        color = if (next) scheme.surfaceContainerHighest else Color.Transparent,
     ) {
         Row(
             Modifier.fillMaxWidth().height(IntrinsicSize.Min).alpha(if (done) 0.6f else 1f)
@@ -439,12 +439,12 @@ private fun PaperRow(p: Paper, view: ExamsView, up: Boolean, down: Boolean) {
                 PaperText(p, plan, done)
                 if (stacked && !done) {
                     Spacer(Modifier.height(8.dp))
-                    SeatBadge(p, p.key in view.fresh)
+                    SeatBadge(p, p.key in view.fresh, next)
                 }
             }
             if (!stacked && !done) {
                 Spacer(Modifier.width(8.dp))
-                Box(Modifier.padding(vertical = RAIL_PAD).align(Alignment.CenterVertically)) { SeatBadge(p, p.key in view.fresh) }
+                Box(Modifier.padding(vertical = RAIL_PAD).align(Alignment.CenterVertically)) { SeatBadge(p, p.key in view.fresh, next) }
             }
         }
     }
@@ -494,13 +494,19 @@ private fun TimeBlock(p: Paper, done: Boolean, modifier: Modifier) {
 }
 
 @Composable
-private fun SeatBadge(p: Paper, fresh: Boolean) {
+private fun SeatBadge(p: Paper, fresh: Boolean, lifted: Boolean) {
     val s = p.slot
     val scheme = MaterialTheme.colorScheme
     val shape = MaterialTheme.shapes.medium
     val inner = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
     if (s.seated) {
-        Surface(shape = shape, color = if (fresh) scheme.tertiaryContainer else scheme.secondaryContainer) {
+        // the next paper's card is secondaryContainer's tone near enough, so the badge drops back to the page there
+        val color = when {
+            fresh -> scheme.tertiaryContainer
+            lifted -> scheme.surface
+            else -> scheme.secondaryContainer
+        }
+        Surface(shape = shape, color = color) {
             Column(Modifier.widthIn(min = 56.dp).then(inner), horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(s.room.ifBlank { "Room ?" }, style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold), maxLines = 1)
                 if (s.seat.isNotBlank()) Text("seat ${s.seat}", style = MaterialTheme.typography.labelSmall, maxLines = 1)

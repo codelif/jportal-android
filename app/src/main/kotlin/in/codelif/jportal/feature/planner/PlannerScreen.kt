@@ -460,7 +460,7 @@ private fun ClassRow(view: PlannerView, k: Klass, row: Int, up: Boolean, down: B
     val stacked = LocalDensity.current.fontScale > 1.3f
     Surface(
         onClick = { view.openSheet("k:$row") },
-        color = if (live) scheme.tertiaryContainer.copy(alpha = 0.6f) else Color.Transparent,
+        color = if (live) scheme.surfaceContainerHighest else Color.Transparent,
     ) {
         Row(
             Modifier.fillMaxWidth().height(IntrinsicSize.Min)
@@ -477,20 +477,21 @@ private fun ClassRow(view: PlannerView, k: Klass, row: Int, up: Boolean, down: B
                 Text(meta, style = MaterialTheme.typography.bodyMedium, color = scheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 if (stacked && k.venue.isNotBlank()) {
                     Spacer(Modifier.height(8.dp))
-                    Venue(k.venue)
+                    Venue(k.venue, live)
                 }
             }
             if (!stacked && k.venue.isNotBlank()) {
                 Spacer(Modifier.width(8.dp))
-                Box(Modifier.padding(vertical = RAIL_PAD).align(Alignment.CenterVertically)) { Venue(k.venue) }
+                Box(Modifier.padding(vertical = RAIL_PAD).align(Alignment.CenterVertically)) { Venue(k.venue, live) }
             }
         }
     }
 }
 
 @Composable
-private fun Venue(venue: String) {
-    Surface(shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.secondaryContainer) {
+private fun Venue(venue: String, lifted: Boolean) {
+    val scheme = MaterialTheme.colorScheme
+    Surface(shape = MaterialTheme.shapes.medium, color = if (lifted) scheme.surface else scheme.secondaryContainer) {
         Box(Modifier.widthIn(min = 56.dp).padding(horizontal = 10.dp, vertical = 6.dp), contentAlignment = Alignment.Center) {
             Text(venue, style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold), maxLines = 1)
         }
