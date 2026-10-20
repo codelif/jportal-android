@@ -56,7 +56,7 @@ val LocalNavScope = staticCompositionLocalOf<AnimatedVisibilityScope?> { null }
 val LocalOnScreen = compositionLocalOf { true }
 
 /**
- * the whole navigation: the four tabs side by side in one pager so a swipe
+ * the whole navigation: the tabs side by side in one pager so a swipe
  * moves between them, a back stack of pages on top with one seekable
  * transition so predictive back scrubs the real animation, and a shared
  * transition layout for the ring that flies from the list into the subject page.

@@ -35,6 +35,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -62,6 +63,7 @@ import `in`.codelif.jportal.data.Resource
 import `in`.codelif.jportal.domain.BatchPath
 import `in`.codelif.jportal.domain.DayPlan
 import `in`.codelif.jportal.domain.Klass
+import `in`.codelif.jportal.domain.Paper
 import `in`.codelif.jportal.domain.Timetable
 import `in`.codelif.jportal.domain.detect
 import `in`.codelif.jportal.domain.electives
@@ -70,6 +72,8 @@ import `in`.codelif.jportal.domain.prefill
 import `in`.codelif.jportal.domain.week
 import `in`.codelif.jportal.feature.academics.COMPONENT
 import `in`.codelif.jportal.feature.academics.rememberMinute
+import `in`.codelif.jportal.feature.attendance.titleCase
+import `in`.codelif.jportal.ui.LocalNavigator
 import `in`.codelif.jportal.ui.LocalBottomInset
 import `in`.codelif.jportal.ui.components.Clock
 import `in`.codelif.jportal.ui.components.DayPill
@@ -84,6 +88,7 @@ import `in`.codelif.jportal.ui.components.dropdown
 import `in`.codelif.jportal.ui.components.group
 import `in`.codelif.jportal.ui.components.rememberClockWidth
 import `in`.codelif.jportal.ui.components.resourceStates
+import `in`.codelif.jportal.ui.nav.Route
 import kotlinx.coroutines.flow.collectLatest
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -107,6 +112,8 @@ class PlannerView(
     val day: LocalDate,
     val today: LocalDate,
     val plan: DayPlan,
+    /** today's papers not yet over, for the banner */
+    val exams: List<Paper>,
     val timeline: Boolean,
     val dot: Dot,
     /** "batch", or "k:<row>" for a class on [plan] */
@@ -171,10 +178,13 @@ fun rememberPlanner(list: LazyListState): PlannerView {
         DayPlan.of(week.filter { it.day == day.dayOfWeek }, if (day == today) now.toLocalTime() else null)
     }
 
+    val sheetPapers by produceState<List<Paper>?>(null, today) { value = repo.examSheet() }
+    val exams = sheetPapers.orEmpty().filter { it.day == today && it.status(now) != Paper.Status.Done }.sortedWith(compareBy(nullsLast()) { it.start })
+
     val dot = rememberDot(list, "tl-$day", plan.rows.size)
 
     return PlannerView(
-        res, path, detected, batch, catalog, picks.orEmpty(), counts, days, day, today, plan, timeline, dot,
+        res, path, detected, batch, catalog, picks.orEmpty(), counts, days, day, today, plan, exams, timeline, dot,
         sheet, { sheet = it }, { picked = it.toEpochDay() },
         { p -> prefs.setPlannerBatch(p?.takeIf { it != detected }?.key) },
         { p -> path?.let { prefs.setElectives(it.phaseKey, p) } },
@@ -211,6 +221,7 @@ fun LazyListScope.plannerContent(view: PlannerView) {
         }
         return
     }
+    if (view.exams.isNotEmpty()) item("exams") { ExamBanner(view.exams) }
     item("days") { DayStrip(view) }
     item("day-h") { DayHeader(view.day, view.today) }
     if (view.plan.rows.isEmpty()) {
@@ -246,6 +257,35 @@ private fun BatchChip(view: PlannerView) {
         label = { Text(batch.name) },
         trailingIcon = { Ic(R.drawable.ic_expand_more, null, Modifier.size(18.dp)) },
     )
+}
+
+/** classes still show on an exam day, this says why they might not matter */
+@Composable
+private fun ExamBanner(papers: List<Paper>) {
+    val nav = LocalNavigator.current
+    val scheme = MaterialTheme.colorScheme
+    Surface(
+        onClick = { nav.push(Route.Exams) },
+        shape = MaterialTheme.shapes.large,
+        color = scheme.tertiaryContainer,
+        contentColor = scheme.onTertiaryContainer,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+    ) {
+        Row(Modifier.padding(start = 16.dp, end = 12.dp, top = 12.dp, bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Ic(R.drawable.ic_edit_calendar, null, Modifier.size(24.dp))
+            Spacer(Modifier.width(16.dp))
+            Column(Modifier.weight(1f)) {
+                Text(if (papers.size == 1) "Exam today" else "${papers.size} exams today", style = MaterialTheme.typography.labelLarge)
+                Text(
+                    papers.joinToString(" · ") { p -> listOfNotNull(p.slot.subjectName.titleCase(), p.slot.start?.format(SPOKEN)).joinToString(", ") },
+                    style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            Ic(R.drawable.ic_chevron_right, null)
+        }
+    }
 }
 
 @Composable

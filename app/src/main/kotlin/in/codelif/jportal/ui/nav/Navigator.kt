@@ -12,6 +12,7 @@ sealed interface Route {
     data object Attendance : Tab { override val key = "attendance" }
     data object Academics : Tab { override val key = "academics" }
     data object Subjects : Tab { override val key = "subjects" }
+    data object Planner : Tab { override val key = "planner" }
     data object Me : Tab { override val key = "me" }
 
     /** codes, not portal ids, so any semester's subject opens the same way */
@@ -20,6 +21,8 @@ sealed interface Route {
     }
     data class GradeCard(val code: String) : Route { override val key = "gradecard/$code" }
     data class Marks(val code: String) : Route { override val key = "marks/$code" }
+    /** the current exam semester's date sheet, from the planner's exam banner */
+    data object Exams : Route { override val key = "exams" }
     data object Choices : Route { override val key = "choices" }
     data object Mooc : Route { override val key = "mooc" }
     data object Profile : Route { override val key = "profile" }
@@ -31,7 +34,7 @@ sealed interface Route {
     data object About : Route { override val key = "about" }
 
     companion object {
-        val tabs: List<Tab> = listOf(Attendance, Academics, Subjects, Me)
+        val tabs: List<Tab> = listOf(Attendance, Academics, Subjects, Planner, Me)
     }
 }
 

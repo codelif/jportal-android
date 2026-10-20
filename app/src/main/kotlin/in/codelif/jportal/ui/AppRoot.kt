@@ -41,6 +41,7 @@ import `in`.codelif.jportal.R
 import `in`.codelif.jportal.feature.attendance.AttendanceScreen
 import `in`.codelif.jportal.feature.feedback.FeedbackScreen
 import `in`.codelif.jportal.feature.academics.AcademicsScreen
+import `in`.codelif.jportal.feature.academics.ExamsScreen
 import `in`.codelif.jportal.feature.academics.GradeCardScreen
 import `in`.codelif.jportal.feature.academics.MarksScreen
 import `in`.codelif.jportal.feature.me.AboutScreen
@@ -49,6 +50,7 @@ import `in`.codelif.jportal.feature.me.FeesScreen
 import `in`.codelif.jportal.feature.me.HostelScreen
 import `in`.codelif.jportal.feature.me.MeScreen
 import `in`.codelif.jportal.feature.me.ProfileScreen
+import `in`.codelif.jportal.feature.planner.PlannerScreen
 import `in`.codelif.jportal.feature.registration.ChoicesScreen
 import `in`.codelif.jportal.feature.registration.MoocScreen
 import `in`.codelif.jportal.feature.settings.SettingsScreen
@@ -95,7 +97,7 @@ private fun SignedIn() {
     val barHeight: Dp = 80.dp
     val pager = rememberPagerState(initialPage = Route.tabs.indexOf(nav.tab)) { Route.tabs.size }
 
-    // fixed on purpose: only the tabs read it, and flipping it on push relaid all four mid transition
+    // fixed on purpose: only the tabs read it, and flipping it on push relaid every tab mid transition
     CompositionLocalProvider(LocalNavigator provides nav, LocalBottomInset provides barHeight) {
         // tags double as resource ids so the benchmark journeys can find the tabs
         Box(Modifier.fillMaxSize().semantics { testTagsAsResourceId = true }) {
@@ -120,10 +122,12 @@ private fun Screen(route: Route) = when (route) {
     Route.Attendance -> AttendanceScreen()
     Route.Academics -> AcademicsScreen()
     Route.Subjects -> SubjectsScreen()
+    Route.Planner -> PlannerScreen()
     Route.Me -> MeScreen()
     is Route.Subject -> SubjectScreen(route)
     is Route.GradeCard -> GradeCardScreen(route)
     is Route.Marks -> MarksScreen(route)
+    Route.Exams -> ExamsScreen()
     Route.Choices -> ChoicesScreen()
     Route.Mooc -> MoocScreen()
     Route.Profile -> ProfileScreen()
@@ -141,6 +145,7 @@ private val tabs = listOf(
     TabSpec(Route.Attendance, "Attendance", R.drawable.ic_fact_check, R.drawable.ic_fact_check_filled),
     TabSpec(Route.Academics, "Academics", R.drawable.ic_school, R.drawable.ic_school_filled),
     TabSpec(Route.Subjects, "Subjects", R.drawable.ic_menu_book, R.drawable.ic_menu_book_filled),
+    TabSpec(Route.Planner, "Planner", R.drawable.ic_schedule, R.drawable.ic_schedule_filled),
     TabSpec(Route.Me, "Me", R.drawable.ic_person, R.drawable.ic_person_filled),
 )
 

@@ -93,7 +93,7 @@ class CalendarSync(context: Context, private val prefs: Prefs, private val repo:
             return
         }
         val cal = prefs.calendarState.value ?: return
-        val sheet = sheet() ?: return
+        val sheet = repo.examSheet() ?: return
         lock.withLock {
             if (!prefs.calendarSyncState.value) return
             withContext(Dispatchers.IO) {
@@ -104,13 +104,6 @@ class CalendarSync(context: Context, private val prefs: Prefs, private val repo:
                 }
             }
         }
-    }
-
-    /** every paper of the current exam semester, or null while any part of it is missing */
-    private suspend fun sheet(): List<Paper>? {
-        val sem = repo.examSemesters.await().data?.firstOrNull() ?: return null
-        val events = repo.examEvents(sem).await().data ?: return null
-        return events.flatMap { ev -> repo.examSchedule(ev).await().data?.map { Paper(ev, it) } ?: return null }
     }
 
     private fun write(cal: Long, sheet: List<Paper>) {

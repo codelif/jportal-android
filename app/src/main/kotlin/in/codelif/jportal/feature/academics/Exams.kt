@@ -90,6 +90,7 @@ import `in`.codelif.jportal.ui.components.Ic
 import `in`.codelif.jportal.ui.components.MessageState
 import `in`.codelif.jportal.ui.components.RAIL_PAD
 import `in`.codelif.jportal.ui.components.Rail
+import `in`.codelif.jportal.ui.components.ScreenScaffold
 import `in`.codelif.jportal.ui.components.SectionHeader
 import `in`.codelif.jportal.ui.components.SemesterPicker
 import `in`.codelif.jportal.ui.components.StaleNotice
@@ -653,4 +654,18 @@ internal fun Fact(icon: Int, text: String, sub: String?, tint: Color = MaterialT
             if (sub != null) Text(sub, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
+}
+
+/** the date sheet as a page of its own, for links from outside academics */
+@Composable
+fun ExamsScreen() {
+    val nav = LocalNavigator.current
+    val view = rememberExams(null)
+    ScreenScaffold(
+        title = "Exams",
+        onBack = { nav.pop() },
+        refreshing = view.events.refreshing && view.events.data != null,
+        onRefresh = view.refresh,
+    ) { examsContent(view) }
+    ExamSheet(view)
 }

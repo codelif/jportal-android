@@ -1,5 +1,6 @@
 package `in`.codelif.jportal.data
 
+import `in`.codelif.jportal.domain.Paper
 import `in`.codelif.jportal.session.SessionManager
 import `in`.codelif.ktjiit.api.Portal
 import `in`.codelif.ktjiit.marks.MarksReport
@@ -60,6 +61,13 @@ class Repository(
     fun examEvents(sem: Semester) = store("exam_ev:${sem.id}", ListSerializer(ExamEvent.serializer()), 60) { it.examEvents(sem) }
 
     fun examSchedule(ev: ExamEvent) = store("exam_sch:${ev.id}", ListSerializer(ExamSlot.serializer()), 60) { it.examSchedule(ev) }
+
+    /** every paper of the current exam semester, or null while any part of it is missing */
+    suspend fun examSheet(): List<Paper>? {
+        val sem = examSemesters.await().data?.firstOrNull() ?: return null
+        val events = examEvents(sem).await().data ?: return null
+        return events.flatMap { ev -> examSchedule(ev).await().data?.map { Paper(ev, it) } ?: return null }
+    }
 
     // marks and grades
 
