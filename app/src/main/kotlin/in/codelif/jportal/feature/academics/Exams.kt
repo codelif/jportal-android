@@ -6,8 +6,6 @@ import android.content.Intent
 import android.provider.CalendarContract
 import android.widget.Toast
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,7 +14,6 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.IntrinsicSize
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -30,7 +27,6 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
@@ -60,7 +56,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
-import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
@@ -71,12 +66,8 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import `in`.codelif.jportal.LocalGraph
@@ -92,13 +83,18 @@ import `in`.codelif.jportal.feature.attendance.titleCase
 import `in`.codelif.jportal.feature.subject.byCode
 import `in`.codelif.jportal.ui.LocalNavigator
 import `in`.codelif.jportal.ui.components.CenteredLoading
+import `in`.codelif.jportal.ui.components.Clock
+import `in`.codelif.jportal.ui.components.DayPill
 import `in`.codelif.jportal.ui.components.Frog
 import `in`.codelif.jportal.ui.components.Ic
 import `in`.codelif.jportal.ui.components.MessageState
+import `in`.codelif.jportal.ui.components.RAIL_PAD
+import `in`.codelif.jportal.ui.components.Rail
 import `in`.codelif.jportal.ui.components.SectionHeader
 import `in`.codelif.jportal.ui.components.SemesterPicker
 import `in`.codelif.jportal.ui.components.StaleNotice
 import `in`.codelif.jportal.ui.components.group
+import `in`.codelif.jportal.ui.components.rememberClockWidth
 import `in`.codelif.jportal.ui.components.resourceStates
 import `in`.codelif.jportal.ui.nav.Route
 import `in`.codelif.ktjiit.model.ExamEvent
@@ -264,9 +260,7 @@ private val DAY = DateTimeFormatter.ofPattern("EEEE, d MMMM")
 private val SHORT = DateTimeFormatter.ofPattern("EEE d MMM")
 private val TIME = DateTimeFormatter.ofPattern("h:mm a")
 private val CLOCK = DateTimeFormatter.ofPattern("h:mm")
-private val MERIDIEM = DateTimeFormatter.ofPattern("a")
 private val MONTH = DateTimeFormatter.ofPattern("MMM")
-private val WEEKDAY = DateTimeFormatter.ofPattern("EEEEE")
 
 /** 3:30 – 4:30 PM, or 11:30 AM – 1:00 PM across noon. the portal's own text when it won't parse */
 private fun window(p: Paper): String? {
@@ -381,25 +375,7 @@ private fun DayCell(d: LocalDate, papers: List<Paper>, plan: ExamPlan, next: Boo
             else -> papers.size.let { if (it == 1) "1 exam" else "$it exams" }
         },
     ).joinToString(", ")
-    val shape = MaterialTheme.shapes.large
-    val cell = Modifier.widthIn(min = 48.dp).heightIn(min = 72.dp)
-        .then(if (today) Modifier.border(2.dp, scheme.primary, shape) else Modifier)
-        .clearAndSetSemantics { contentDescription = said }
-    val body: @Composable () -> Unit = {
-        Column(
-            Modifier.padding(horizontal = 10.dp, vertical = 10.dp).alpha(if (exam && !done) 1f else 0.6f),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Text(d.format(WEEKDAY), style = MaterialTheme.typography.labelSmall)
-            Text("${d.dayOfMonth}", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
-            Spacer(Modifier.height(4.dp))
-            Row(Modifier.height(6.dp), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-                papers.take(3).forEach { _ -> Box(Modifier.size(6.dp).background(fg, CircleShape)) }
-            }
-        }
-    }
-    if (exam) Surface(onClick = onClick, color = bg, contentColor = fg, shape = shape, modifier = cell) { body() }
-    else Surface(color = bg, contentColor = fg, shape = shape, modifier = cell) { body() }
+    DayPill(d, bg, fg, papers.size, dim = !(exam && !done), today = today, said = said, onClick = if (exam) onClick else null)
 }
 
 @Composable
@@ -456,9 +432,9 @@ private fun PaperRow(p: Paper, view: ExamsView, up: Boolean, down: Boolean) {
             Modifier.fillMaxWidth().height(IntrinsicSize.Min).alpha(if (done) 0.6f else 1f)
                 .clearAndSetSemantics { contentDescription = said }.padding(start = 8.dp, end = 12.dp),
         ) {
-            TimeBlock(p, done, Modifier.padding(vertical = ROW_PAD))
+            TimeBlock(p, done, Modifier.padding(vertical = RAIL_PAD))
             Rail(next, up, down)
-            Column(Modifier.weight(1f).padding(vertical = ROW_PAD)) {
+            Column(Modifier.weight(1f).padding(vertical = RAIL_PAD)) {
                 PaperText(p, plan, done)
                 if (stacked && !done) {
                     Spacer(Modifier.height(8.dp))
@@ -467,37 +443,10 @@ private fun PaperRow(p: Paper, view: ExamsView, up: Boolean, down: Boolean) {
             }
             if (!stacked && !done) {
                 Spacer(Modifier.width(8.dp))
-                Box(Modifier.padding(vertical = ROW_PAD).align(Alignment.CenterVertically)) { SeatBadge(p, p.key in view.fresh) }
+                Box(Modifier.padding(vertical = RAIL_PAD).align(Alignment.CenterVertically)) { SeatBadge(p, p.key in view.fresh) }
             }
         }
     }
-}
-
-private val ROW_PAD = 12.dp
-
-/** the dot sits level with the clock's first line */
-@Composable
-private fun Rail(next: Boolean, up: Boolean, down: Boolean) {
-    val scheme = MaterialTheme.colorScheme
-    val line = scheme.outlineVariant
-    val accent = scheme.tertiary
-    val clock = MaterialTheme.typography.titleLarge.lineHeight
-    Box(
-        Modifier.width(28.dp).fillMaxHeight().drawBehind {
-            val x = size.width / 2
-            val y = ROW_PAD.toPx() + clock.toPx() / 2
-            val thin = 2.dp.toPx()
-            if (up) drawLine(line, Offset(x, 0f), Offset(x, y), thin)
-            if (down) drawLine(line, Offset(x, y), Offset(x, size.height), thin)
-            if (next) {
-                // the tail only leads somewhere when a paper follows
-                if (down) drawLine(accent, Offset(x, y), Offset(x, size.height - ROW_PAD.toPx()), 6.dp.toPx(), StrokeCap.Round)
-                drawCircle(accent, 7.dp.toPx(), Offset(x, y))
-            } else {
-                drawCircle(line, 5.dp.toPx(), Offset(x, y))
-            }
-        },
-    )
 }
 
 @Composable
@@ -528,41 +477,14 @@ private fun TimeBlock(p: Paper, done: Boolean, modifier: Modifier) {
     val bold = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
     val small = MaterialTheme.typography.labelMedium
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
-    // every row gets the widest clock's width, or the rail jogs sideways from card to card
-    val measurer = rememberTextMeasurer()
-    val density = LocalDensity.current
-    val width = remember(bold, small, density) {
-        val clock = buildAnnotatedString {
-            withStyle(bold.toSpanStyle()) { append("12:00") }
-            withStyle(SpanStyle(fontSize = small.fontSize, fontWeight = small.fontWeight)) { append(" PM") }
-        }
-        val px = maxOf(measurer.measure(clock).size.width, measurer.measure("to 12:00 PM", small).size.width)
-        with(density) { px.toDp() }
-    }
-    Column(modifier.width(width), horizontalAlignment = Alignment.End) {
+    Column(modifier.width(rememberClockWidth()), horizontalAlignment = Alignment.End) {
         val start = s.start
         when {
             done -> {
                 Text(s.day?.dayOfMonth?.toString() ?: "?", style = bold, color = primary)
                 Text(s.day?.format(MONTH)?.uppercase().orEmpty(), style = small, color = muted)
             }
-            start != null -> {
-                Text(
-                    buildAnnotatedString {
-                        append(start.format(CLOCK))
-                        withStyle(SpanStyle(fontSize = small.fontSize, fontWeight = small.fontWeight)) { append(" " + start.format(MERIDIEM).uppercase()) }
-                    },
-                    style = bold,
-                    color = primary,
-                    maxLines = 1,
-                )
-                val end = s.end
-                if (end != null) {
-                    // across noon the end needs its own am/pm
-                    val sameHalf = (start.hour < 12) == (end.hour < 12)
-                    Text("to " + (if (sameHalf) end.format(CLOCK) else end.format(TIME)), style = small, color = muted, maxLines = 1)
-                }
-            }
+            start != null -> Clock(start, s.end)
             // the portal sent something we can't read, show it as is rather than a dash
             s.from.isNotBlank() -> Text(s.from.trim(), style = MaterialTheme.typography.labelLarge, color = primary, maxLines = 2)
             else -> Text("TBA", style = bold, color = muted)
