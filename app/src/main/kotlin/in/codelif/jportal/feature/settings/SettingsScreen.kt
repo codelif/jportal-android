@@ -93,6 +93,7 @@ fun SettingsScreen() {
     val target by prefs.targetState.collectAsState()
     val icon by prefs.iconState.collectAsState()
     val updateCheck by prefs.updateCheckState.collectAsState()
+    val timeline by prefs.timelineState.collectAsState()
     var editTarget by remember { mutableStateOf(false) }
     var confirmOut by remember { mutableStateOf(false) }
 
@@ -127,6 +128,10 @@ fun SettingsScreen() {
         item("att") { Group { row { Entry(R.drawable.ic_flag, "Attendance goal", "$target%") { editTarget = true } } } }
         item("exam-h") { SectionHeader("Exams") }
         item("exam") { ExamSyncGroup() }
+        item("plan-h") { SectionHeader("Planner") }
+        item("plan") {
+            Group { row { Toggle("Show timeline", "The rail and the dot that follows your scroll", timeline) { prefs.setTimeline(it) } } }
+        }
         // the play build can't check at all, its store does the updating
         if (BuildConfig.UPDATE_CHECK) {
             item("upd-h") { SectionHeader("Updates") }
