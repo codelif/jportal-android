@@ -56,6 +56,8 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import `in`.codelif.jportal.LocalGraph
 import `in`.codelif.jportal.R
@@ -288,6 +290,13 @@ private fun ExamBanner(papers: List<Paper>) {
     }
 }
 
+// a week fits on a phone, so stretch it across, but keep a gap once it doesn't and scrolls
+private val SPREAD = object : Arrangement.Horizontal {
+    override val spacing = 6.dp
+    override fun Density.arrange(totalSize: Int, sizes: IntArray, layoutDirection: LayoutDirection, outPositions: IntArray) =
+        with(Arrangement.SpaceBetween) { arrange(totalSize, sizes, layoutDirection, outPositions) }
+}
+
 @Composable
 private fun DayStrip(view: PlannerView) {
     val scheme = MaterialTheme.colorScheme
@@ -295,7 +304,7 @@ private fun DayStrip(view: PlannerView) {
     LazyRow(
         Modifier.fillMaxWidth().padding(top = 8.dp),
         contentPadding = PaddingValues(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        horizontalArrangement = SPREAD,
     ) {
         items(view.days, key = { it.toEpochDay() }) { d ->
             val n = view.counts[d.dayOfWeek] ?: 0
