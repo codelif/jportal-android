@@ -1,0 +1,4 @@
+Portal fixes
+
+- fix: attendance, marks, grades and exams load again
+- fix: JPortal no longer says the portal is down when it isn't
