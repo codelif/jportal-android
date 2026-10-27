@@ -154,6 +154,7 @@ fun describe(e: Throwable?): String = when (e) {
     is PortalException.Untrusted -> "The portal is having trouble on its end"
     is PortalException.Network -> "You're offline"
     is PortalException.ServerUnavailable -> "The portal is down right now"
+    is PortalException.ServerError -> "The portal couldn't handle this request"
     is PortalException.PortalError -> e.errors.firstOrNull()?.lowercase()?.replaceFirstChar { it.uppercase() } ?: "The portal said no"
     is PortalException.SessionExpired -> "Session expired"
     is PortalException.EmptyResponse, is PortalException.Malformed -> "The portal sent something odd"

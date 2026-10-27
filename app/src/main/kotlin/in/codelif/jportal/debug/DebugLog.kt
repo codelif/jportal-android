@@ -28,6 +28,7 @@ object DebugLog {
         val kind = when (e) {
             is PortalException.PortalError -> "PortalError(${e.code}) ${e.errors.joinToString("; ")}"
             is PortalException.ServerUnavailable -> "ServerUnavailable(${e.code}, ${e.shape})"
+            is PortalException.ServerError -> "ServerError(${e.code}, ${e.shape}) ${e.error}: ${e.detail}"
             is PortalException -> e.javaClass.simpleName
             else -> "${e.javaClass.simpleName}: ${e.message}"
         }
